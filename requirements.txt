@@ -1,0 +1,6 @@
+numpy>=1.18.1
+scipy>=1.4.1
+pytmatrix>=0.3.1
+xarray>=0.14.1
+pandas>=0.25.3
+
