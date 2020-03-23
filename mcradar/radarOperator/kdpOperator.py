@@ -88,7 +88,6 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     mcTable = creatKdpCols(mcTable, wls)
     
     ##calcualtion of the kdp for AR < 1
-    print('calculating KDP for AR < 1')
     meanAngle=0
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
 
@@ -108,7 +107,6 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     
     
     ##calculation of the kdp for AR >= 1
-    print('calculating KDP for AR >= 1')
     meanAngle=90
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
 

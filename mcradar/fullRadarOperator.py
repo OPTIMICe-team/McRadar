@@ -1,10 +1,27 @@
 # -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
+# Author: José Dias Neto
+
 
 import xarray as xr
 from mcradar import *
 
+
 def fullRadar(dicSettings, mcTable):
+    """
+    Calculates the radar variables over the entire range
+
+    Parameters
+    ----------
+    dicSettings: a dictionary with all settings output from loadSettings()
+    mcTable: McSnow data output from getMcSnowTable()
+
+    Returns
+    -------
+    specXR: xarray data set containing the spectra(range, vel) and
+    KDP(range)
+
+    """
 
 
     specXR = xr.Dataset()
@@ -13,7 +30,6 @@ def fullRadar(dicSettings, mcTable):
 
     for i, heightEdge0 in enumerate(dicSettings['heightRange']):
     
-        print(heightEdge0)
         heightEdge0, 
         centerHeight = heightEdge0 + dicSettings['heightRes']/2.
         heightEdge1 = heightEdge0 + dicSettings['heightRes']

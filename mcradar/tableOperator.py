@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+
 import pandas as pd
 import numpy as np
+
 
 ## it can be more general allowing the user to pass
 ## the name of the columns

@@ -18,7 +18,6 @@ def lin2db(data):
     returns the data converted to dB
     """
 
-    
     return 10*np.log10(data)
 
 def db2lin(data):

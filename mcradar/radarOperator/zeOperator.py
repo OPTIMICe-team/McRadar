@@ -38,7 +38,6 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     """
     
     #---pyTmatrix setup
-    print('Wavelength {wl}'.format(wl=wl))
     # initialize a scatterer object
     scatterer = Scatterer(wavelength=wl)
     scatterer.radius_type = Scatterer.RADIUS_MAXIMUM
@@ -101,7 +100,6 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     #mcTable = mcTable.sort_values('dia')
     
     ##calculation of the reflectivity for AR < 1
-    print('calculating Ze for AR < 1') 
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
 
     #particle properties
@@ -124,7 +122,6 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
         mcTable['sZeV_{0}'.format(wlStr)][mcTable['sPhi']<1] = reflect_v
 
     ##calculation of the reflectivity for AR >= 1
-    print('calculating Ze for AR >= 1')
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
     
     #particle properties
