@@ -23,7 +23,7 @@ with open('requirements.txt') as requirements_file:
 
 setup(
     name='mcradar',
-    version='0.0',
+    version='0.0.1',
     description='Radar forward operator for McSnow output (builded on top of PyTmatrix)',
     long_description=readme + '\n\n', #+ history,
     author='Jose Dias Neto',
