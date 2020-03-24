@@ -46,9 +46,4 @@ setup(
     keywords='Radar Operator McSnow PyTmatrix',
     include_package_data=True,
     zip_safe=False,
-#    extras_require = {
-#        'GSW': ["gsw>=3.0.6"],
-#        'manualqc': ["matplotlib"],
-#        'regional': ["Shapely>=1.6.4"]
-#    }
 )
