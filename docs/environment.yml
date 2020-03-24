@@ -7,5 +7,6 @@ dependencies:
 - scipy
 - matplotlib
 - pandas
-- pytmatrix
 - pip
+- pip:
+    - pytmatrix
