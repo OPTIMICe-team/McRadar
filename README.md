@@ -1,4 +1,5 @@
 [![DOI](https://zenodo.org/badge/249136844.svg)](https://zenodo.org/badge/latestdoi/249136844)
+[![Documentation Status](https://readthedocs.org/projects/mcradar/badge/?version=latest)](https://mcradar.readthedocs.io/en/latest/?badge=latest)
 
 # McRadar
 
@@ -18,3 +19,7 @@ to use PyTmatrix to reproduce observed bimodal spectra.
 
 - This initial release only provides the spectra and KDP, but all the additional radar
 variable will be implemented soon.
+
+## Documentation
+
+The documentation and a usage guide are available at [https://mcradar.readthedocs.io](https://mcradar.readthedocs.io/).
