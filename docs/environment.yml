@@ -8,5 +8,3 @@ dependencies:
 - matplotlib
 - pandas
 - pip
-- pip:
-    - pytmatrix
