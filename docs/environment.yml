@@ -1,0 +1,11 @@
+name: cotede
+
+dependencies:
+- python
+- numpy
+- xarray
+- scipy
+- matplotlib
+- pandas
+- pytmatrix
+- pip
