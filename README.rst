@@ -22,11 +22,9 @@ to use PyTmatrix to reproduce observed bimodal spectra.
 Limitation
 ----------
 
-- This package is still not able to deal with particles with an extreme aspect ratio
-(e.g. larger than 6 or much smaller 0.1 ).
+- This package is still not able to deal with particles with an extreme aspect ratio (e.g. larger than 6 or much smaller 0.1 ).
 
-- This initial release only provides the spectra and KDP, but all the additional radar
-variable will be implemented soon.
+- This initial release only provides the spectra and KDP, but all the additional radar variable will be implemented soon.
 
 -------------
 Documentation

@@ -10,6 +10,9 @@ Welcome to McRadar's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   readme
+   installation
+   usage
 
 
 Indices and tables
