@@ -70,6 +70,7 @@ The following example computes the spectra and the KDP for a W-band radar with 3
 
 
 Lets first define the initial settings
+
 .. code-block:: python
 
    >>> dicSettings = mcr.loadSettings(dataPath='data_test.dat', elv=30, freq=np.array([95e9]))
