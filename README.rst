@@ -30,4 +30,4 @@ Limitation
 Documentation
 -------------
 
-The documentation and a usage guide are available at `https://mcradar.readthedocs.io <https://mcradar.readthedocs.io>`_).
+The documentation and a usage guide are available at `https://mcradar.readthedocs.io <https://mcradar.readthedocs.io>`_.
