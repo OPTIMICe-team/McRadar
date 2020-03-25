@@ -23,7 +23,7 @@ with open('requirements.txt') as requirements_file:
 
 setup(
     name='mcradar',
-    version='0.0',
+    version='0.0.1',
     description='Radar forward operator for McSnow output (builded on top of PyTmatrix)',
     long_description=readme + '\n\n', #+ history,
     author='Jose Dias Neto',
@@ -34,21 +34,15 @@ setup(
                    'mcradar'},
     license='3-clause BSD',
     install_requires=requirements,
-#    classifiers=[
-#        'Development Status :: 4 - Beta',
-#        'Programming Language :: Python :: 2',
-#        'Programming Language :: Python :: 2.7',
-#        'Programming Language :: Python :: 3',
-#        'Programming Language :: Python :: 3.6',
-#        'Programming Language :: Python :: 3.7',
-#        'License :: OSI Approved :: BSD License',
-#        ],
+    classifiers=[
+        'Development Status :: 2 - Pre-Alpha',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'License :: OSI Approved :: BSD License',
+        ],
     keywords='Radar Operator McSnow PyTmatrix',
     include_package_data=True,
     zip_safe=False,
-#    extras_require = {
-#        'GSW': ["gsw>=3.0.6"],
-#        'manualqc': ["matplotlib"],
-#        'regional': ["Shapely>=1.6.4"]
-#    }
 )
