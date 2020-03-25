@@ -45,4 +45,7 @@ setup(
     keywords='Radar Operator McSnow PyTmatrix',
     include_package_data=True,
     zip_safe=False,
+    extras_require = {
+        'plots': ["matplotlib>=3.2"],
+    }
 )
