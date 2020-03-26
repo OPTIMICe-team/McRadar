@@ -11,7 +11,7 @@ except ImportError:
     from distutils.core import setup
 
 
-with open('README.md') as readme_file:
+with open('README.rst') as readme_file:
     readme = readme_file.read()
 #
 #with open('HISTORY.rst') as history_file:
@@ -45,4 +45,7 @@ setup(
     keywords='Radar Operator McSnow PyTmatrix',
     include_package_data=True,
     zip_safe=False,
+    extras_require = {
+        'plots': ["matplotlib>=3.2"],
+    }
 )
