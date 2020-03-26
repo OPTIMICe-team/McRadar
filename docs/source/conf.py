@@ -22,7 +22,7 @@ copyright = '2020, José Dias Neto'
 author = 'José Dias Neto'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0'
+release = '0.0.1'
 
 
 # -- General configuration ---------------------------------------------------
