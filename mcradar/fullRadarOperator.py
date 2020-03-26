@@ -19,7 +19,6 @@ def fullRadar(dicSettings, mcTable):
     Returns
     -------
     specXR: xarray dataset with the spectra(range, vel) and KDP(range)
-
     """
 
 
