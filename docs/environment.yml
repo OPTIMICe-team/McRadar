@@ -7,3 +7,7 @@ dependencies:
 - scipy
 - matplotlib
 - pandas
+- gfortran
+- pip
+- pip:
+    - pytmatrix 
