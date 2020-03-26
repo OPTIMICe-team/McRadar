@@ -24,15 +24,15 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     as_ratio: aspect ratio of the super particle (array[n])
     rho: density [g/mmˆ3] of the super particle (array[n])
     elv: elevation angle [°]
-    ndgs: number of division points used to integrate over the particle surface (default= 30 it is already high)
+    ndgs: division points used to integrate over the particle surface
     canting: boolean (default = False)
     cantingStd: standard deviation of the canting angle [°] (default = 1)
     meanAngle: mean value of the canting angle [°] (default = 0)
     
     Returns
     -------
-    reflect: horizontal reflectivity[mm^6/m^3] from each super particle (array[n])
-    reflect_v: vertical reflectivity[mm^6/m^3] from each super particle (array[n])
+    reflect: super particle horizontal reflectivity[mm^6/m^3] (array[n])
+    reflect_v: super particle vertical reflectivity[mm^6/m^3] (array[n])
     refIndex: refractive index from each super particle (array[n])
     """
     
@@ -84,7 +84,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     wls: wavelenght [mm] (iterable)
     elv: elevation angle [°]
     mcTable: McSnow table returned from getMcSnowTable()
-    ndgs: number of division points used to integrate over the particle surface (default= 30 it is already high)
+    ndgs: division points used to integrate over the particle surface
 
     Returns 
     -------
