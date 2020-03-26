@@ -12,8 +12,8 @@ def getMcSnowTable(mcSnowPath):
     """
     Read McSnow output table
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     mcSnowPath: path for the output from McSnow
     
     Returns
@@ -41,8 +41,8 @@ def calcRho(mcTable):
     """
     Calculate the density of each super particles.
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     mcTable: output from getMcSnowTable()
     
     Returns
@@ -74,8 +74,8 @@ def creatZeCols(mcTable, wls):
     """
     Create the KDP column
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     mcTable: output from getMcSnowTable()
     wls: wavelenght (iterable) [mm]
     
@@ -99,8 +99,8 @@ def creatKdpCols(mcTable, wls):
     """
     Create the KDP column
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     mcTable: output from getMcSnowTable()
     wls: wavelenght (iterable) [mm]
     

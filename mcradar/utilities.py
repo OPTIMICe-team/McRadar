@@ -9,8 +9,8 @@ def lin2db(data):
     """
     Convert from linear to logarithm units
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     data: single value or an array
     
     Returns
@@ -24,8 +24,8 @@ def db2lin(data):
     """
     Convert from logarithm to linear units
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     
     data: single value or an array
     

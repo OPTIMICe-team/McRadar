@@ -13,7 +13,7 @@ Welcome to McRadar's documentation!
    readme
    installation
    usage
-
+   modules
 
 Indices and tables
 ==================

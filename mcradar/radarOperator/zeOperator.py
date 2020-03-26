@@ -17,15 +17,14 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     """
     Calculates the Ze of one particle
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     wl: wavelenght [mm] (single value)
     radii: radius [mm] of the particle (array[n])
     as_ratio: aspect ratio of the super particle (array[n])
     rho: density [g/mmˆ3] of the super particle (array[n])
     elv: elevation angle [°]
-    ndgs: number of division points used to integrate over 
-          the particle surface (default= 30 it is already high)
+    ndgs: number of division points used to integrate over the particle surface (default= 30 it is already high)
     canting: boolean (default = False)
     cantingStd: standard deviation of the canting angle [°] (default = 1)
     meanAngle: mean value of the canting angle [°] (default = 0)
@@ -80,13 +79,12 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     each superparticle from a given distribution of super 
     particles
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     wls: wavelenght [mm] (iterable)
     elv: elevation angle [°]
     mcTable: McSnow table returned from getMcSnowTable()
-    ndgs: number of division points used to integrate over 
-          the particle surface (default= 30 it is already high)
+    ndgs: number of division points used to integrate over the particle surface (default= 30 it is already high)
 
     Returns 
     -------

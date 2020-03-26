@@ -70,8 +70,8 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     Calculates kdp each superparticle from a given 
     distribution of super particles
     
-    Parameter
-    ---------
+    Parameters
+    ----------
     wls: wavelenght [mm] (iterable)
     elv: elevation angle [°]
     mcTable: McSnow table returned from getMcSnowTable()
