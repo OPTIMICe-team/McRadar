@@ -1,4 +1,4 @@
-name: mcadar
+name: mcradar
 
 dependencies:
 - python
@@ -8,3 +8,5 @@ dependencies:
 - matplotlib
 - pandas
 - pip
+- pip:
+    - mcradar
