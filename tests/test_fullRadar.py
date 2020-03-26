@@ -43,6 +43,8 @@ mcTable = mcTable.sort_values('sHeight')
 print('getting things done :) -> testing the fullRadarOperator')
 output = mcr.fullRadar(dicSettings, mcTable)
 
+print('saving the output file')
+output.to_netcdf('output.nc')
 
 print('plotting the spetra')
 for wl in dicSettings['wl']:

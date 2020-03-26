@@ -96,8 +96,20 @@ Calculating the spectra and KDP
 
    >>> output = mcr.fullRadar(dicSettings, mcTable)
 
-Congratulations!! You completed all the steps. The output is an xarray dataset, and you can plot the spectra as follow
+Congratulations!! You completed all the steps. The output is a xarray dataset, and it allows you to use all the functionalities of xarray of datasets. For example, you can easily save the output and plot the data. 
 
+Exporting the output to NetCDF
+
+.. code-block:: python
+
+   >>> output.to_netcdf('output.nc')
+
+.. note::
+   The plotting functionality is available if you have the 
+   `matplotlib <https://matplotlib.org/>`_ installed. 
+
+Plotting the spectra
+ 
 .. code-block:: python
 
    >>> for wl in dicSettings['wl']:
