@@ -11,5 +11,5 @@ Development Lead
 Contributors
 ------------
 
-* Davide Ori
-* Guilherme Castelao 
+* `Guilherme Castelao <https://github.com/castelao>`_
+* `Davide Ori <https://github.com/DaveOri>`_
