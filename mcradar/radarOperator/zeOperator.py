@@ -116,8 +116,8 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
                                                             cantingStd=cantingStd, 
                                                             meanAngle=meanAngle, ndgs=ndgs)
         wlStr = '{:.2e}'.format(wl)
-        mcTable['sZeH_{0}'.format(wlStr)][mcTable['sPhi']<1] = reflect_h
-        mcTable['sZeV_{0}'.format(wlStr)][mcTable['sPhi']<1] = reflect_v
+        mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
+        mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
 
     ##calculation of the reflectivity for AR >= 1
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
@@ -138,8 +138,8 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
                                                             cantingStd=cantingStd, 
                                                             meanAngle=meanAngle, ndgs=ndgs)
         wlStr = '{:.2e}'.format(wl)
-        mcTable['sZeH_{0}'.format(wlStr)][mcTable['sPhi']>=1] = reflect_h
-        mcTable['sZeV_{0}'.format(wlStr)][mcTable['sPhi']>=1] = reflect_v
+        mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_h
+        mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_v
 
     return mcTable
 

@@ -26,12 +26,12 @@ def getMcSnowTable(mcSnowPath):
     
     names = ['time', 'mTot', 'sHeight', 'vel', 'dia', 
              'area', 'sMice', 'sVice', 'sPhi', 'sRhoIce',
-             'igf', 'sMultpl', 'sMrime', 'sVrime']
+             'igf', 'sMult', 'sMrime', 'sVrime']
 
     mcTable = pd.read_csv(mcSnowPath, header=None, names=names)
     selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
-    selMcTable['radii'] = selMcTable['dia']/2. 
+    selMcTable['radii_mm'] = selMcTable['dia']/2.
     selMcTable = calcRho(selMcTable)
             
     return selMcTable
@@ -59,13 +59,13 @@ def calcRho(mcTable):
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
     tmpVol = (np.pi/6.) * (tmpTable['dia']*1e2)**3 * tmpTable['sPhi']
     tmpRho = (tmpTable['mTot']*1e3)/tmpVol
-    mcTable['sRho'][mcTable['sPhi']<1] = tmpRho
+    mcTable['sRho'].values[mcTable['sPhi']<1] = tmpRho
 
     # calculation for AR >= 1
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
     tmpVol = (np.pi/6.) * (tmpTable['dia']*1e2)**3 * tmpTable['sPhi']**2
     tmpRho = (tmpTable['mTot']*1e3)/tmpVol
-    mcTable['sRho'][mcTable['sPhi']>=1] = tmpRho
+    mcTable['sRho'].values[mcTable['sPhi']>=1] = tmpRho
     
     return mcTable
 
@@ -91,7 +91,10 @@ def creatZeCols(mcTable, wls):
         wlStr = '{:.2e}'.format(wl)
         mcTable['sZeH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
         mcTable['sZeV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-    
+
+        mcTable['sZeMultH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+        mcTable['sZeMultV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+
     return mcTable
 
 
@@ -114,5 +117,6 @@ def creatKdpCols(mcTable, wls):
     
         wlStr = '{:.2e}'.format(wl)
         mcTable['sKDP_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+        mcTable['sKDPMult_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
    
     return mcTable

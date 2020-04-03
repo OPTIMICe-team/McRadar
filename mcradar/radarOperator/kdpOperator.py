@@ -103,7 +103,7 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
                                    meanAngle=meanAngle)
 
         wlStr = '{:.2e}'.format(wl)
-        mcTable['sKDP_{0}'.format(wlStr)][mcTable['sPhi']<1] = kdp_M1
+        mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
     
     
     ##calculation of the kdp for AR >= 1
@@ -122,7 +122,7 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
                                    meanAngle=meanAngle)
 
         wlStr = '{:.2e}'.format(wl)
-        mcTable['sKDP_{0}'.format(wlStr)][mcTable['sPhi']>=1] = kdp_M1
+        mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
     
     return mcTable
 
@@ -149,8 +149,9 @@ def getIntKdp(wls, mcTable, centerHeight):
     for wl in wls:
         
         wlStr = '{:.2e}'.format(wl)
+        mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
         
-        kdpXR = xr.DataArray(mcTable['sKDP_{0}'.format(wlStr)].sum()[np.newaxis],
+        kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
                              dims=('range'),
                              coords={'range':centerHeight[np.newaxis]},
                              name='kdpInt_{0}'.format(wlStr))

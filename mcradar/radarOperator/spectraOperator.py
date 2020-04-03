@@ -48,11 +48,16 @@ def getMultFrecSpec(wls, mcTable, velBins, velCenterBins , centerHeight):
     for wl in wls:
     
         wlStr = '{:.2e}'.format(wl)
+	
+        mcTable['sZeMultH_{0}'.format(wlStr)] = mcTable['sZeH_{0}'.format(wlStr)] * mcTable['sMult']
+        mcTable['sZeMultV_{0}'.format(wlStr)] = mcTable['sZeV_{0}'.format(wlStr)] * mcTable['sMult']
+
+
         tmpDataDic['spec_H_{0}'.format(wlStr)]=getVelIntSpec(mcTable, mcTable_binned, 
-                                                             'sZeH_{0}'.format(wlStr)).values[:,0]
+                                                             'sZeMultH_{0}'.format(wlStr)).values[:,0]
         
         tmpDataDic['spec_V_{0}'.format(wlStr)]=getVelIntSpec(mcTable, mcTable_binned, 
-                                                             'sZeV_{0}'.format(wlStr)).values[:,0]
+                                                             'sZeMultV_{0}'.format(wlStr)).values[:,0]
     
     #converting to XR
     specTable = pd.DataFrame(data=tmpDataDic, index=velCenterBins)
