@@ -31,7 +31,10 @@ def getMcSnowTable(mcSnowPath):
     mcTable = pd.read_csv(mcSnowPath, header=None, names=names)
     selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
-    selMcTable['radii_mm'] = selMcTable['dia']/2.
+    selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
+    selMcTable['mTot_g'] = selMcTable['mTot'] * 1e3
+    selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
+
     selMcTable = calcRho(selMcTable)
             
     return selMcTable
@@ -39,7 +42,7 @@ def getMcSnowTable(mcSnowPath):
 
 def calcRho(mcTable):
     """
-    Calculate the density of each super particles.
+    Calculate the density of each super particles [g/cm^3].
     
     Parameters
     ----------
@@ -57,14 +60,14 @@ def calcRho(mcTable):
 
     #calculaiton for AR < 1
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
-    tmpVol = (np.pi/6.) * (tmpTable['dia']*1e2)**3 * tmpTable['sPhi']
-    tmpRho = (tmpTable['mTot']*1e3)/tmpVol
+    tmpVol = (np.pi/6.) * (tmpTable['dia_cm'])**3 * tmpTable['sPhi']
+    tmpRho = tmpTable['mTot_g']/tmpVol
     mcTable['sRho'].values[mcTable['sPhi']<1] = tmpRho
 
     # calculation for AR >= 1
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
-    tmpVol = (np.pi/6.) * (tmpTable['dia']*1e2)**3 * tmpTable['sPhi']**2
-    tmpRho = (tmpTable['mTot']*1e3)/tmpVol
+    tmpVol = (np.pi/6.) * (tmpTable['dia_cm'])**3 * (tmpTable['sPhi'])**2
+    tmpRho = (tmpTable['mTot_g'])/tmpVol
     mcTable['sRho'].values[mcTable['sPhi']>=1] = tmpRho
     
     return mcTable

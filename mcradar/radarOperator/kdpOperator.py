@@ -91,7 +91,7 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     meanAngle=0
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
 
-    radii_M1 = (tmpTable['radii'] * 1e3).values #[mm]
+    radii_M1 = (tmpTable['radii_mm']).values #[mm]
     as_ratio_M1 = tmpTable['sPhi'].values
     rho_M1 = tmpTable['sRho'].values #[g/cm^3]
 
@@ -110,7 +110,7 @@ def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     meanAngle=90
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
 
-    radii_M1 = (tmpTable['radii'] * 1e3).values #[mm]
+    radii_M1 = (tmpTable['radii_mm']).values #[mm]
     as_ratio_M1 = tmpTable['sPhi'].values
     rho_M1 = tmpTable['sRho'].values #[g/cm^3]
 

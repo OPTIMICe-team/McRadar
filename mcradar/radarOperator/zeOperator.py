@@ -105,7 +105,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     meanAngle=0
     cantingStd=1
     
-    radii_M1 = (tmpTable['radii'] * 1e3).values #[mm]
+    radii_M1 = tmpTable['radii_mm'].values #[mm]
     as_ratio_M1 = tmpTable['sPhi'].values
     rho_M1 = tmpTable['sRho'].values #[g/cm^3]
 
@@ -127,7 +127,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     meanAngle=90
     cantingStd=1
     
-    radii_M1 = (tmpTable['radii'] * 1e3).values #[mm]
+    radii_M1 = (tmpTable['radii_mm']).values #[mm]
     as_ratio_M1 = tmpTable['sPhi'].values
     rho_M1 = tmpTable['sRho'].values #[g/cm^3]
 
