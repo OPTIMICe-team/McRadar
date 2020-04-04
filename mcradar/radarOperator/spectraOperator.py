@@ -43,6 +43,7 @@ def getMultFrecSpec(wls, mcTable, velBins, velCenterBins , centerHeight):
     """
     
     mcTable_binned = pd.cut(mcTable['vel'], velBins)
+
     tmpDataDic = {}
      
     for wl in wls:
@@ -52,13 +53,12 @@ def getMultFrecSpec(wls, mcTable, velBins, velCenterBins , centerHeight):
         mcTable['sZeMultH_{0}'.format(wlStr)] = mcTable['sZeH_{0}'.format(wlStr)] * mcTable['sMult']
         mcTable['sZeMultV_{0}'.format(wlStr)] = mcTable['sZeV_{0}'.format(wlStr)] * mcTable['sMult']
 
+        intSpecH = getVelIntSpec(mcTable, mcTable_binned,'sZeMultH_{0}'.format(wlStr))
+        tmpDataDic['spec_H_{0}'.format(wlStr)] = intSpecH.values[:,0]
 
-        tmpDataDic['spec_H_{0}'.format(wlStr)]=getVelIntSpec(mcTable, mcTable_binned, 
-                                                             'sZeMultH_{0}'.format(wlStr)).values[:,0]
-        
-        tmpDataDic['spec_V_{0}'.format(wlStr)]=getVelIntSpec(mcTable, mcTable_binned, 
-                                                             'sZeMultV_{0}'.format(wlStr)).values[:,0]
-    
+        intSpecV = getVelIntSpec(mcTable, mcTable_binned, 'sZeMultV_{0}'.format(wlStr))
+        tmpDataDic['spec_V_{0}'.format(wlStr)] = intSpecV.values[:,0]
+
     #converting to XR
     specTable = pd.DataFrame(data=tmpDataDic, index=velCenterBins)
     specTable = specTable.to_xarray()
