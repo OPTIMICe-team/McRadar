@@ -24,37 +24,44 @@ def fullRadar(dicSettings, mcTable):
 
     specXR = xr.Dataset()
     counts = np.ones_like(dicSettings['heightRange'])*np.nan
-
+    vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
 
     for i, heightEdge0 in enumerate(dicSettings['heightRange']):
-    
-        heightEdge0, 
-        centerHeight = heightEdge0 + dicSettings['heightRes']/2.
+
         heightEdge1 = heightEdge0 + dicSettings['heightRes']
 
-        mcTableTmp = mcTable[(mcTable['sHeight']>=heightEdge0) & 
+        print('Range: from {0} to {1}'.format(heightEdge0, heightEdge1))
+
+        mcTableTmp = mcTable[(mcTable['sHeight']>heightEdge0) &
                              (mcTable['sHeight']<=heightEdge1)].copy()
 
         mcTableTmp = mcTableTmp[(mcTableTmp['sPhi']<=6)]
 
-        #calculating doppler spectra
-        mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'], 
+        #calculating Ze of each particle
+        mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
                                     mcTableTmp, ndgs=dicSettings['ndgsVal'])
-    
-        tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'], 
-                                    dicSettings['velCenterBin'], centerHeight)
-    
+
+        #calculating doppler spectra
+        tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'],
+                                    dicSettings['velCenterBin'], heightEdge1)
+
+        #volume normalization
+        tmpSpecXR = tmpSpecXR/vol
         specXR = xr.merge([specXR, tmpSpecXR])
 
-        #calculating kdp
-        mcTableTmp = calcParticleKDP(dicSettings['wl'], dicSettings['elv'], 
+        #calculating kdp of each particle
+        mcTableTmp = calcParticleKDP(dicSettings['wl'], dicSettings['elv'],
                                 mcTableTmp, ndgs=dicSettings['ndgsVal'])
-    
-        tmpKdpXR = getIntKdp(dicSettings['wl'], mcTableTmp, centerHeight)
-        specXR = xr.merge([specXR, tmpKdpXR])
-    
-        counts[i] = len(mcTableTmp.vel.values)
 
+        #calculating the integrated kdp
+        tmpKdpXR = getIntKdp(dicSettings['wl'], mcTableTmp, heightEdge1)
+
+        #volume normalization
+        tmpKdpXR = tmpKdpXR/vol
+
+        specXR = xr.merge([specXR, tmpKdpXR])
+
+        counts[i] = len(mcTableTmp.vel.values)
 
     return specXR
 
