@@ -57,6 +57,7 @@ if PSD_method in ["bin","1D_KDE"]:
     Rgrid_log=np.linspace(minR,maxR,nbins)
     Rgrid_logdiff=Rgrid_log[1]-Rgrid_log[0]
     heightvec_bound = np.linspace(0,model_top,n_heights)
+    #heightvec_bound = np.linspace(2900,3000,5) #TODO: remove (only for debugging)
     Vbox =  area_box*heightvec_bound[1]-heightvec_bound[0] #[m3]
 
     reducedDataTable = pd.DataFrame()
@@ -122,6 +123,8 @@ if PSD_method in ["bin","1D_KDE"]:
             df = mcr.tableOperator.calcRho(df)
             df = df[(df['sPhi'] >= 0.015)] #TODO: this kills everything larger than 3.8mm
             reducedDataTable = pd.concat([reducedDataTable, df])
+
+    reducedDataTable = reducedDataTable[(reducedDataTable['sMult']>1.0)]
     print(reducedDataTable)
     print("?") 
     #starting the simulation
