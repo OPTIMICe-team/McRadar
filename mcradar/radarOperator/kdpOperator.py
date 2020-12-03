@@ -9,9 +9,11 @@ from pytmatrix import refractive, tmatrix_aux
 
 from mcradar.tableOperator import creatKdpCols
 
+# TODO: This function has been incorporated to the zeOperator, can be archived
 def calcKdpPropOneFreq(wl, radii, as_ratio, 
-                       rho, elv, ndgs=2, canting=False, 
-                       cantingStd=1, meanAngle=0):
+                       rho, elv, ndgs=2,
+                       canting=False, cantingStd=1,
+                       meanAngle=0):
     """
     Calculation of the KDP of one particle
     
@@ -35,7 +37,7 @@ def calcKdpPropOneFreq(wl, radii, as_ratio,
     
     scatterer = Scatterer(wavelength=wl)#, axis_ratio=1./as_ratio)
     scatterer.radius_type = Scatterer.RADIUS_MAXIMUM
-    scatterer.set_geometry(tmatrix_aux.geom_horiz_forw)
+    #scatterer.set_geometry(tmatrix_aux.geom_horiz_forw) # Davide: geometry is set later
     scatterer.ndgs = ndgs
     
     if canting==True: 
@@ -64,7 +66,7 @@ def calcKdpPropOneFreq(wl, radii, as_ratio,
     kdp = 1e-3* (180.0/np.pi) * scatterer.wavelength *(sMat)
     return kdp
 
-
+# TODO: This function has been incorporated to the zeOperator, can be archived
 def calcParticleKDP(wls, elv, mcTable, ndgs=30):
     """
     Calculates kdp each superparticle from a given 
