@@ -29,9 +29,10 @@ setup(
     author='Jose Dias Neto',
     author_email='jdias@gmail.com',
     #url='http://',
-    packages=['mcradar'],
-    package_dir = {'mcradar':
-                   'mcradar'},
+    packages=['mcradar',
+              'mcradar.radarOperator'],
+    package_dir = {'mcradar':'mcradar',
+                   'mcradar.radarOperator':'mcradar/radarOperator'},
     license='3-clause BSD',
     install_requires=requirements,
     classifiers=[
