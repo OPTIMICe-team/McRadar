@@ -37,9 +37,9 @@ def fullRadar(dicSettings, mcTable):
 
         mcTableTmp = mcTableTmp[(mcTableTmp['sPhi']<=6)]
 
-        #calculating Ze of each particle
-        mcTableTmp, mcTableTmpK = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
-                                                 mcTableTmp, ndgs=dicSettings['ndgsVal'])
+        #calculating Ze and kdp of each particle
+        mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
+                                    mcTableTmp, ndgs=dicSettings['ndgsVal'])
 
         #calculating doppler spectra
         tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'],
@@ -49,12 +49,8 @@ def fullRadar(dicSettings, mcTable):
         tmpSpecXR = tmpSpecXR/vol
         specXR = xr.merge([specXR, tmpSpecXR])
 
-        #calculating kdp of each particle
-        #mcTableTmp = calcParticleKDP(dicSettings['wl'], dicSettings['elv'],
-        #                        mcTableTmp, ndgs=dicSettings['ndgsVal'])
-
         #calculating the integrated kdp
-        tmpKdpXR = getIntKdp(dicSettings['wl'], mcTableTmpK, heightEdge1)
+        tmpKdpXR = getIntKdp(dicSettings['wl'], mcTableTmp, heightEdge1)
 
         #volume normalization
         tmpKdpXR = tmpKdpXR/vol

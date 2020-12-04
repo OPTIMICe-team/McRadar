@@ -115,9 +115,10 @@ def calcRho(mcTable):
     return mcTable
 
 
-def creatZeCols(mcTable, wls):
+# TODO this might return an xr.Dataset with wl as dimension instead
+def creatRadarCols(mcTable, wls):
     """
-    Create the KDP column
+    Create the Ze and KDP column
     
     Parameters
     ----------
@@ -126,8 +127,8 @@ def creatZeCols(mcTable, wls):
     
     Returns
     -------
-    mcTable with an empty columns 'sZe*_*' for 
-    storing Ze_H and Ze_V of one particle of a 
+    mcTable with a empty columns 'sZe*_*' 'sKDP_*' for 
+    storing Ze_H and Ze_V and sKDP of one particle of a 
     given wavelength
     """
     
@@ -136,32 +137,10 @@ def creatZeCols(mcTable, wls):
         wlStr = '{:.2e}'.format(wl)
         mcTable['sZeH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
         mcTable['sZeV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-
+        mcTable['sKDP_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+     
         mcTable['sZeMultH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
         mcTable['sZeMultV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-
-    return mcTable
-
-
-def creatKdpCols(mcTable, wls):
-    """
-    Create the KDP column
-    
-    Parameters
-    ----------
-    mcTable: output from getMcSnowTable()
-    wls: wavelenght (iterable) [mm]
-    
-    Returns
-    -------
-    mcTable with an empty column 'sKDP_*' for 
-    storing the calculated KDP of a given wavelength.
-    """
-    
-    for wl in wls:
-    
-        wlStr = '{:.2e}'.format(wl)
-        mcTable['sKDP_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
         mcTable['sKDPMult_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-   
+
     return mcTable

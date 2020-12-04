@@ -7,8 +7,7 @@ from pytmatrix.tmatrix import Scatterer
 from pytmatrix import psd, orientation, radar
 from pytmatrix import refractive, tmatrix_aux
 
-from mcradar.tableOperator import creatZeCols
-from mcradar.tableOperator import creatKdpCols
+from mcradar.tableOperator import creatRadarCols
 
 
 def calcScatPropOneFreq(wl, radii, as_ratio, 
@@ -73,6 +72,7 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
         refIndex[i] = refractive.mi(wl, rho[i])
         reflect_h[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, True)
         reflect_v[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, False)
+
         # scattering geometry forward
         scatterer.thet = scatterer.thet0
         scatterer.phi = (scatterer.phi0) % 360. #KDP geometry
@@ -104,12 +104,9 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
     calculation is made separetely for aspect ratio < 1 and >=1.
     """
     
-    #calling the function to create Ze columns
-    mcTable = creatZeCols(mcTable, wls)
-    #mcTable = mcTable.sort_values('dia')
-    # also for Kdp
-    mcTableK = creatKdpCols(mcTable, wls) # TODO evaluate merging with mc Table, a unique function to generate them would be ideal
-    
+    #calling the function to create output columns
+    mcTable = creatRadarCols(mcTable, wls)
+
     ##calculation of the reflectivity for AR < 1
     tmpTable = mcTable[mcTable['sPhi']<1].copy()
 
@@ -132,7 +129,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
         wlStr = '{:.2e}'.format(wl)
         mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
         mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
-        mcTableK['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
+        mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
 
 
     ##calculation of the reflectivity for AR >= 1
@@ -157,10 +154,8 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30):#zeOperator
         wlStr = '{:.2e}'.format(wl)
         mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_h
         mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_v
-        mcTableK['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
+        mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
 
-    return mcTable, mcTableK
-
-
+    return mcTable
 
 
