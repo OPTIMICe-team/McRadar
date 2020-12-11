@@ -9,7 +9,7 @@ from pytmatrix import refractive, tmatrix_aux
 
 from mcradar.tableOperator import creatRadarCols
 
-
+# TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
                         canting=False, cantingStd=1, 
@@ -63,6 +63,14 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     sMat = np.ones_like(radii)*np.nan
 
     for i, radius in enumerate(radii):
+        # A quick function to save the distribution of values used in the test
+        #with open('/home/dori/table_McRadar.txt', 'a') as f:
+        #    f.write('{0:f} {1:f} {2:f} {3:f} {4:f} {5:f} {6:f}\n'.format(wl, elv,
+        #                                                                 meanAngle,
+        #                                                                 cantingStd,
+        #                                                                 radius,
+        #                                                                 rho[i],
+        #                                                                 as_ratio[i]))
         # scattering geometry backward
         scatterer.thet = 180. - scatterer.thet0
         scatterer.phi = (180. + scatterer.phi0) % 360.

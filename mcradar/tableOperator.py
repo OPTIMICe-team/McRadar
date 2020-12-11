@@ -36,6 +36,7 @@ def getMcSnowTable(mcSnowPath):
     selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
 
     selMcTable = calcRho(selMcTable)
+    #selMcTable['sRho'] = 6.0e-3*mcTable.mTot/(np.pi*mcTable.dia**3*mcTable.sPhi**(-2+3*(mcTable.sPhi<1).astype(int)))
             
     return selMcTable
 
@@ -82,6 +83,7 @@ def kernel_estimate(R_SP_list,Rgrid,sigma0=0.62,weight=None,space='loge'): #take
             
     return N_R
 
+
 def calcRho(mcTable):
     """
     Calculate the density of each super particles [g/cm^3].
@@ -108,7 +110,7 @@ def calcRho(mcTable):
 
     # calculation for AR >= 1
     tmpTable = mcTable[mcTable['sPhi']>=1].copy()
-    tmpVol = (np.pi/6.) * (tmpTable['dia_cm'])**3 * (tmpTable['sPhi'])**2
+    tmpVol = (np.pi/6.) * (tmpTable['dia_cm'])**3 / (tmpTable['sPhi'])**2
     tmpRho = (tmpTable['mTot_g'])/tmpVol
     mcTable['sRho'].values[mcTable['sPhi']>=1] = tmpRho
     
