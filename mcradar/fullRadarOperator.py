@@ -39,7 +39,8 @@ def fullRadar(dicSettings, mcTable):
 
         #calculating Ze and kdp of each particle
         mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
-                                    mcTableTmp, ndgs=dicSettings['ndgsVal'])
+                                    mcTableTmp, ndgs=dicSettings['ndgsVal'],
+                                    scatSet=dicSettings['scatSet'])
 
         #calculating doppler spectra
         tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'],
