@@ -14,6 +14,6 @@ from .tableOperator import getMcSnowTable
 
 from .radarOperator.spectraOperator import getMultFrecSpec
 from .radarOperator.zeOperator import calcParticleZe
-from .radarOperator.kdpOperator import calcParticleKDP, getIntKdp
+from .radarOperator.kdpOperator import getIntKdp
 
 from .fullRadarOperator import fullRadar

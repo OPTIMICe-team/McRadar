@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+import os
+from glob import glob
 import numpy as np
 from scipy import constants
 
@@ -8,7 +10,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                  maxVel=3, minVel=-3, ndgsVal=30, 
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
-                 heightRes=50, gridBaseArea=1):
+                 heightRes=50, gridBaseArea=1,
+                 scatSet={'mode':'full'}):
     
     """
     This function defines the settings for starting the 
@@ -27,6 +30,12 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     minHeight: minimun height (default = 0) [m]
     heightRes: resolution of the height bins (default = 50) [m]
     gridBaseArea: area of the grid base (default = 1) [m^2]
+    scatSet: dictionary that defines the settings for the scattering calculations
+      scatSet['mode']: string that defines the scattering mode. Valid values are
+                        - full -> pytmatrix calculations for each superparticle
+                        - table -> use only the LUT values, very fast, skips nan values in LUT
+                        - wisdom -> compute the pytmatrix solution where LUT is still nan and update LUT values
+      scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' the path to the lut.nc files is required
 
     Returns
     -------
@@ -50,6 +59,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                        'heightRes':heightRes,
                        'heightRange':np.arange(minHeight, maxHeight, heightRes),
                        'gridBaseArea':gridBaseArea,
+                       'scatSet':scatSet,
                        }
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
@@ -63,6 +73,32 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                             'use the dataPath parameter for it',
                             'e.g. loadSettings(dataPath="/data/path/.")'])
         print(msg)
+        dicSettings = None
+    if (scatSet['mode'] == 'table') or (scatSet['mode']=='wisdom'):
+        if 'lutPath' in scatSet.keys():
+            if os.path.exists(scatSet['lutPath']):
+                msg = 'Using LUTs in ' + scatSet['lutPath']
+                lutFiles = glob(scatSet['lutPath']+'testLUT*.nc')
+                listFreq = [l.split('testLUT_')[-1].split('.nc')[0].split('Hz_')[0] for l in lutFiles]
+                listFreq = list(dict.fromkeys(listFreq))
+                listElev = [l.split('testLUT_')[-1].split('.nc')[0].split('Hz_')[-1] for l in lutFiles]
+                listElev = list(dict.fromkeys(listElev))
+                dicSettings['scatSet']['lutFreq'] = [float(f) for f in listFreq]
+                dicSettings['scatSet']['lutElev'] = [int(e) for e in listElev]
+
+            else:
+                msg = ('\n').join(['with this scattering mode ', scatSet['mode'],
+                                   'a valid path to the scattering LUT is required',
+                                   scatSet['lutPath'], 'is not valid, check your settings'])
+                dicSettings = None
+        else:
+            msg = ('\n').join(['with this scattering mode ', scatSet['mode'],
+                               'a valid path to the scattering LUT is required',
+                               'check your settings'])
+            dicSettings = None
+        print(msg)
+    elif scatSet['mode'] != 'full':
+        print('scatSet[mode] must be either full (default), table or wisdom')
         dicSettings = None
 
     return dicSettings
