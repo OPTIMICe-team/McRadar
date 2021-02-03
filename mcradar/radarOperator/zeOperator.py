@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
-
+import subprocess
 import numpy as np
 import xarray as xr
 from glob import glob
@@ -15,14 +15,14 @@ from mcradar.tableOperator import creatRadarCols
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
                         canting=False, cantingStd=1, 
-                        meanAngle=0):
+                        meanAngle=0, safeTmatrix=False):
     """
     Calculates the Ze at H and V polarization, Kdp for one wavelength
     TODO: LDR???
     
     Parameters
     ----------
-    wl: wavelenght [mm] (single value)
+    wl: wavelength [mm] (single value)
     radii: radius [mm] of the particle (array[n])
     as_ratio: aspect ratio of the super particle (array[n])
     rho: density [g/mmˆ3] of the super particle (array[n])
@@ -74,24 +74,67 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
         #                                                                 rho[i],
         #                                                                 as_ratio[i]))
         # scattering geometry backward
-        scatterer.thet = 180. - scatterer.thet0 # Is it????
+        # radius = 100.0 # just a test to force nans
+
+        scatterer.thet = 180. - scatterer.thet0
         scatterer.phi = (180. + scatterer.phi0) % 360.
         scatterer.radius = radius
         scatterer.axis_ratio = 1./as_ratio[i]
         scatterer.m = refractive.mi(wl, rho[i])
         refIndex[i] = refractive.mi(wl, rho[i])
-        reflect_h[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, True)  # Kwsqrt is not correct by default at every frequency
-        reflect_v[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, False)
 
-        # scattering geometry forward
-        scatterer.thet = scatterer.thet0
-        scatterer.phi = (scatterer.phi0) % 360. #KDP geometry
-        S = scatterer.get_S()
-        sMat[i] = (S[1,1]-S[0,0]).real
+        if safeTmatrix:
+            inputs = [str(scatterer.radius),
+                      str(scatterer.wavelength),
+                      str(scatterer.m),
+                      str(scatterer.axis_ratio),
+                      str(int(canting)),
+                      str(cantingStd),
+                      str(meanAngle),
+                      str(ndgs),
+                      str(scatterer.thet0),
+                      str(scatterer.phi0)]
+            arguments = ' '.join(inputs)
+            a = subprocess.run(['spheroidMcRadar'] + inputs, # this script should be installed by McRadar
+                               capture_output=True)
+            # print(str(a))
+            try:
+                back_hh, back_vv, sMatrix, _ = str(a.stdout).split('Results ')[-1].split()
+                back_hh = float(back_hh)
+                back_vv = float(back_vv)
+                sMatrix = float(sMatrix)
+            except:
+                back_hh = np.nan
+                back_vv = np.nan
+                sMatrix = np.nan
+            # print(back_hh, radar.radar_xsect(scatterer, True))
+            # print(back_vv, radar.radar_xsect(scatterer, False))
+            reflect_h[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * back_hh # radar.radar_xsect(scatterer, True)  # Kwsqrt is not correct by default at every frequency
+            reflect_v[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * back_vv # radar.radar_xsect(scatterer, False)
+
+            # scattering geometry forward
+            # scatterer.thet = scatterer.thet0
+            # scatterer.phi = (scatterer.phi0) % 360. #KDP geometry
+            # S = scatterer.get_S()
+            sMat[i] = sMatrix # (S[1,1]-S[0,0]).real
+            # print(sMatrix, sMat[i])
+            # print(sMatrix)
+        else:
+
+            reflect_h[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, True)  # Kwsqrt is not correct by default at every frequency
+            reflect_v[i] = scatterer.wavelength**4/(np.pi**5*scatterer.Kw_sqr) * radar.radar_xsect(scatterer, False)
+
+            # scattering geometry forward
+            scatterer.thet = scatterer.thet0
+            scatterer.phi = (scatterer.phi0) % 360. #KDP geometry
+            S = scatterer.get_S()
+            sMat[i] = (S[1,1]-S[0,0]).real
+
     kdp = 1e-3* (180.0/np.pi)*scatterer.wavelength*sMat
 
     del scatterer # TODO: Evaluate the chance to have one Scatterer object already initiated instead of having it locally
     return reflect_h, reflect_v, refIndex, kdp
+
 
 def radarScat(sp, wl, K2=0.93):
     """
@@ -133,7 +176,8 @@ def radarScat(sp, wl, K2=0.93):
     return reflect_hh, reflect_vv, kdp, ldr_h, rho_hv
 
     
-def calcParticleZe(wls, elv, mcTable, ndgs=30, scatSet={'mode':'full'}):#zeOperator
+def calcParticleZe(wls, elv, mcTable, ndgs=30,
+                   scatSet={'mode':'full', 'safeTmatrix':False}):#zeOperator
     """
     Calculates the horizontal and vertical reflectivity of 
     each superparticle from a given distribution of super 
@@ -141,7 +185,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30, scatSet={'mode':'full'}):#zeOpera
     
     Parameters
     ----------
-    wls: wavelenght [mm] (iterable)
+    wls: wavelength [mm] (iterable)
     elv: elevation angle [°] # TODO: maybe also this can become iterable
     mcTable: McSnow table returned from getMcSnowTable()
     ndgs: division points used to integrate over the particle surface
@@ -202,7 +246,8 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30, scatSet={'mode':'full'}):#zeOpera
             singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
                                              rho_M1, elv, canting=canting, 
                                              cantingStd=cantingStd, 
-                                             meanAngle=meanAngle, ndgs=ndgs)
+                                             meanAngle=meanAngle, ndgs=ndgs,
+                                             safeTmatrix=scatSet['safeTmatrix'])
             reflect_h,  reflect_v, refInd, kdp_M1 = singleScat
             wlStr = '{:.2e}'.format(wl)
             mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_h

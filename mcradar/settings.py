@@ -11,7 +11,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
                  heightRes=50, gridBaseArea=1,
-                 scatSet={'mode':'full'}):
+                 scatSet={'mode':'full',
+                          'safeTmatrix':False,}):
     
     """
     This function defines the settings for starting the 
@@ -42,6 +43,11 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     dicSettings: dictionary with all parameters
     for starting the caculations
     """
+
+    if 'mode' not in scatSet.keys():
+      scatSet['mode'] = 'full'
+    if 'safeTmatrix' not in scatSet.keys():
+      scatSet['safeTmatrix'] = False
 
     if dataPath != None:
 

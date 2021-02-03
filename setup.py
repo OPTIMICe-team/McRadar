@@ -30,7 +30,9 @@ setup(
     author_email='jdias@gmail.com',
     #url='http://',
     packages=['mcradar',
-              'mcradar.radarOperator'],
+              'mcradar.radarOperator',
+              #'bin/spheroidMcRadar'
+              ],
     package_dir = {'mcradar':'mcradar',
                    'mcradar.radarOperator':'mcradar/radarOperator'},
     license='3-clause BSD',
@@ -48,5 +50,6 @@ setup(
     zip_safe=False,
     extras_require = {
         'plots': ["matplotlib>=3.2"],
-    }
+    },
+    scripts=['bin/spheroidMcRadar'],
 )
