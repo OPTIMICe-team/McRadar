@@ -221,7 +221,8 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
             singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
                                              rho_M1, elv, canting=canting, 
                                              cantingStd=cantingStd, 
-                                             meanAngle=meanAngle, ndgs=ndgs)
+                                             meanAngle=meanAngle, ndgs=ndgs,
+                                             safeTmatrix=scatSet['safeTmatrix'])
             reflect_h,  reflect_v, refInd, kdp_M1 = singleScat
             wlStr = '{:.2e}'.format(wl)
             mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
