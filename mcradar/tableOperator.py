@@ -22,13 +22,15 @@ def getMcSnowTable(mcSnowPath):
     variable 'names'. This DataFrame additionally includes
     a column for the radii and the density [sRho]. The 
     velocity is negative towards the ground. 
+    McSnow order of variables:
+    WRITE(74,*) tstep*dtc/60,',', mtot, ',', sp%z, ',',vt, ',',d, ',',A, ',',sp%m_i, ',',sp%V_i,    &
+                   ',',sp%phi, ',',rho_app, ',', IGF, ',', sp%mm, ',', sp%m_r, ',', sp%v_r, ',', sp%xi
+
     """
     
-    names = ['time', 'mTot', 'sHeight', 'vel', 'dia', 
-             'area', 'sMice', 'sVice', 'sPhi', 'sRhoIce',
-             'igf', 'sMult', 'sMrime', 'sVrime']
 
-    mcTable = pd.read_csv(mcSnowPath, header=None, names=names)
+    mcTableXR = xr.open_dataframe(mcSnowPath)
+    mcTable = mcTableXR.to_dataframe() 
     selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
     selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
