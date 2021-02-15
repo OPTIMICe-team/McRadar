@@ -24,11 +24,10 @@ def getMcSnowTable(mcSnowPath):
 
     """
     
-
+    #open nc file with xarray
     mcTableXR = xr.open_dataset(mcSnowPath)
+    #change to pandas dataframe, since McRadar has been working with that
     mcTable = mcTableXR.to_dataframe() 
-    print(mcTable)
-    quit()
     selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
     selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
