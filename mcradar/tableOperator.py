@@ -4,7 +4,7 @@
 
 import pandas as pd
 import numpy as np
-
+import xarray as xr
 
 ## it can be more general allowing the user to pass
 ## the name of the columns
@@ -18,19 +18,17 @@ def getMcSnowTable(mcSnowPath):
     
     Returns
     -------
-    Pandas DataFrame with the columns named after the local
-    variable 'names'. This DataFrame additionally includes
+    Pandas DataFrame with the McSnow output variables. This DataFrame additionally includes
     a column for the radii and the density [sRho]. The 
     velocity is negative towards the ground. 
-    McSnow order of variables:
-    WRITE(74,*) tstep*dtc/60,',', mtot, ',', sp%z, ',',vt, ',',d, ',',A, ',',sp%m_i, ',',sp%V_i,    &
-                   ',',sp%phi, ',',rho_app, ',', IGF, ',', sp%mm, ',', sp%m_r, ',', sp%v_r, ',', sp%xi
 
     """
     
 
-    mcTableXR = xr.open_dataframe(mcSnowPath)
+    mcTableXR = xr.open_dataset(mcSnowPath)
     mcTable = mcTableXR.to_dataframe() 
+    print(mcTable)
+    quit()
     selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
     selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
