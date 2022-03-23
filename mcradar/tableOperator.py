@@ -4,7 +4,7 @@
 
 import pandas as pd
 import numpy as np
-
+import xarray as xr
 
 ## it can be more general allowing the user to pass
 ## the name of the columns
@@ -18,23 +18,31 @@ def getMcSnowTable(mcSnowPath):
     
     Returns
     -------
-    Pandas DataFrame with the columns named after the local
-    variable 'names'. This DataFrame additionally includes
+    Pandas DataFrame with the McSnow output variables. This DataFrame additionally includes
     a column for the radii and the density [sRho]. The 
     velocity is negative towards the ground. 
+
     """
     
-    names = ['time', 'mTot', 'sHeight', 'vel', 'dia', 
-             'area', 'sMice', 'sVice', 'sPhi', 'sRhoIce',
-             'igf', 'sMult', 'sMrime', 'sVrime']
-
-    mcTable = pd.read_csv(mcSnowPath, header=None, names=names)
-    selMcTable = mcTable.copy()
+    #open nc file with xarray
+    mcTableXR = xr.open_dataset(mcSnowPath)
+    print(mcTableXR)
+    #change to pandas dataframe, since McRadar has been working with that
+    selMcTable = mcTableXR.to_dataframe() 
+    print('to_dataframe()')
+    selTime = 600.
+    times = selMcTable['time']
+    selMcTable = selMcTable[times==selTime]
+    #selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
     selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
+    selMcTable['dia_mum'] = selMcTable['dia'] * 1e6 
     selMcTable['mTot_g'] = selMcTable['mTot'] * 1e3
     selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
-
+    if 'sPhi' not in selMcTable:
+      selMcTable['sPhi'] = 1.0 # simply add sPhi = 1
+    
+    selMcTable = calcRhophys(selMcTable)
     selMcTable = calcRho(selMcTable)
     #selMcTable['sRho'] = 6.0e-3*mcTable.mTot/(np.pi*mcTable.dia**3*mcTable.sPhi**(-2+3*(mcTable.sPhi<1).astype(int)))
             
@@ -146,3 +154,23 @@ def creatRadarCols(mcTable, wls):
         mcTable['sKDPMult_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
 
     return mcTable
+    
+def calcRhophys(mcTable):
+    """
+    calculate the density of the particle, using the rime mass, ice mass, water mass,...
+    Parameters
+    ----------
+    mcTable: output from getMcSnowTable()
+    
+    Returns
+    -------
+    mcTable with an additional column for the density.
+    """
+    rho_ice = 919.0
+    rho_liq = 1000.0
+    v_w_out = mcTable['sMrime']/rho_ice + mcTable['sMliqu']/rho_ice - mcTable['sVrime'] # do we have liquid water on the outside of the particle?
+    v_tot = (mcTable['sMice'] + mcTable['sMmelt'])/rho_ice + mcTable['sVrime'] + v_w_out # total volume of the particle
+    mcTable['sRho_tot'] = mcTable['mTot'] / v_tot
+    return mcTable
+    
+    
