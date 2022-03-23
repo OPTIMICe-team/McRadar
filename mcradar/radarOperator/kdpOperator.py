@@ -31,7 +31,9 @@ def getIntKdp(wls, mcTable, centerHeight):
         
         wlStr = '{:.2e}'.format(wl)
         mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
-        
+        print(mcTable['sKDPMult_{0}'.format(wlStr)].sum()) 
+        print(mcTable['sKDPMult_{0}'.format(wlStr)].sum().shape)
+        print(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis])
         kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
                              dims=('range'),
                              coords={'range':centerHeight[np.newaxis]},
