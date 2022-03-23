@@ -10,7 +10,7 @@ from pytmatrix import psd, orientation, radar
 from pytmatrix import refractive, tmatrix_aux
 
 from mcradar.tableOperator import creatRadarCols
-
+import matplotlib.pyplot as plt
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
@@ -64,7 +64,7 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     # S matrix for Kdp
     sMat = np.ones_like(radii)*np.nan
 
-    for i, radius in enumerate(radii):
+    for i, radius in enumerate(radii[::5]): #TODO remove [::5]
         # A quick function to save the distribution of values used in the test
         #with open('/home/dori/table_McRadar.txt', 'a') as f:
         #    f.write('{0:f} {1:f} {2:f} {3:f} {4:f} {5:f} {6:f}\n'.format(wl, elv,
@@ -156,6 +156,8 @@ def radarScat(sp, wl, K2=0.93):
     rho_hv: correlation coefficient (array[n])
     """
     prefactor = 2*np.pi*wl**4/(np.pi**5*K2)
+    #print(sp.Z11.values)
+    #quit()
     reflect_hh = prefactor*(sp.Z11 - sp.Z12 - sp.Z21 + sp.Z22).values
     reflect_vv = prefactor*(sp.Z11 + sp.Z12 + sp.Z21 + sp.Z22).values
     kdp = 1e-3*(180.0/np.pi)*wl*sp.S22r_S11r.values
@@ -177,11 +179,11 @@ def radarScat(sp, wl, K2=0.93):
 
     
 def calcParticleZe(wls, elv, mcTable, ndgs=30,
-                   scatSet={'mode':'full', 'safeTmatrix':False}):#zeOperator
+                   scatSet={'mode':'full', 'safeTmatrix':False}, K2=0.93):#zeOperator
     """
     Calculates the horizontal and vertical reflectivity of 
     each superparticle from a given distribution of super 
-    particles
+    particles,in this case I just quickly wanted to change the function to deal with Monomers with the DDA LUT and use Tmatrix for the aggregates
     
     Parameters
     ----------
@@ -189,7 +191,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
     elv: elevation angle [°] # TODO: maybe also this can become iterable
     mcTable: McSnow table returned from getMcSnowTable()
     ndgs: division points used to integrate over the particle surface
-
+    scatSet: type of scattering calculations to use, choose between full, table, wisdom, SSRGA, Rayleigh or SSRGA-Rayleigh
     Returns 
     -------
     mcTable including the horizontal and vertical reflectivity
@@ -255,6 +257,63 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
             mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_v
             mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
 
+    elif scatSet['mode'] == 'SSRGA':
+        print('using SSRGA scattering table for all particles, elevation is set to 90')
+        lut = xr.open_dataset(scatSet['lutFile'])
+        for wl in wls:
+            points = lut.sel(wavelength=wl*1e-3, elevation=90.0, # sofar: elevation can only be 90, we need more SSRGA calculations for other elevation
+                             size = xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                             method='nearest')
+            ssCbck = points.Cbck.values*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
+            prefactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
+            wlStr = '{:.2e}'.format(wl)
+            mcTable['sZeH_{0}'.format(wlStr)] = prefactor*ssCbck
+            
+    elif scatSet['mode'] == 'Rayleigh':
+        print('using Rayleigh approximation for all particles, only elevation 90 so far')
+        for wl in wls:
+            '''
+            # rayleigh approximation taken from Stefans ssrg_general folder
+            # calculate equivalent radius from equivalent mass
+            re = ((3 * mcTable['mTot']) / (4 * mcTable['sRhoIce'] * np.pi)) ** (1/3) *1e3
+            X = 4*np.pi*re/wl # calculate size parameter
+            qbck_h = 4*X**4*K2 # calculate backscattering efficiency
+            cbck_h = qbck_h  * re**2 * np.pi/((2*np.pi)**2) #need to divide by (2*pi)^2 to get same as ssrga
+            '''
+            wlStr = '{:.2e}'.format(wl)
+            prefactor = wl**4/(np.pi**5*K2)
+            
+            # rayleigh approximation according to Jussi Leinonens diss:             
+            k = 2 * np.pi / (wl*1e-3)
+            sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2 *1e6 /np.pi #need to divide by pi to get same as ssrga, need to multiply by 1e6 to get mm^3
+            mcTable['sZeH_{0}'.format(wlStr)] = prefactor * sigma
+    elif scatSet['mode'] == 'SSRGA-Rayleigh':
+        print('using SSRGA for aggregates and Rayleigh approximation for crystals, only elevation 90')
+        mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy() # only aggregates
+        mcTableCry = mcTable[(mcTable['sNmono']==1)].copy() # only monomers
+        lut = xr.open_dataset(scatSet['lutFile']) # SSRGA LUT
+        for wl in wls:
+            wlStr = '{:.2e}'.format(wl)
+            prefactor = wl**4/(np.pi**5*K2)            
+            # rayleigh approximation for crystal:             
+            k = 2 * np.pi / (wl*1e-3)
+            if len(mcTableCry['mTot']) > 0:
+              ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableCry['mTot']/mcTableCry['sRho_tot']))**2 *1e6 /np.pi #need to divide by pi to get same as ssrga, need to multiply by 1e6 to get mm^3
+              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']==1] = prefactor * ssCbck
+            else:
+              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']==1] = np.nan
+            # ssrga for aggregates:
+            points = lut.sel(wavelength=wl*1e-3, elevation=90.0, # sofar: elevation can only be 90, we need more SSRGA calculations for other elevation
+                             size = xr.DataArray(mcTableAgg['radii_mm'].values, dims='points'),
+                             method='nearest')
+            
+            if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
+              ssCbck = points.Cbck.values*1e6 # in mm^3
+              prefactor = wl**4/(np.pi**5*K2) 
+              wlStr = '{:.2e}'.format(wl)
+              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = prefactor*ssCbck
+            else:
+              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
     elif len(mcTable): # interpolation fails if no selection is possible
         elvSel = scatSet['lutElev'][np.argmin(np.abs(np.array(scatSet['lutElev'])-elv))]
         print('elevation ', elv,'lut elevation ', elvSel)
@@ -262,7 +321,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
             f = 299792458e3/wl
             freSel = scatSet['lutFreq'][np.argmin(np.abs(np.array(scatSet['lutFreq'])-f))]
             print('frequency ', f/1.e9, 'lut frequency ', freSel/1.e9)
-            dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel))
+            dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel)) 
             lut = xr.open_dataset(dataset_filename)#.sel(wavelength=wl,
                                                    #     elevation=elv,
                                                    #     canting=1.0,
@@ -276,9 +335,9 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
 
             reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
             wlStr = '{:.2e}'.format(wl)
-            mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
+            mcTable['sZeH_{0}'.format(wlStr)].values = reflect_h
+            mcTable['sZeV_{0}'.format(wlStr)].values = reflect_v
+            mcTable['sKDP_{0}'.format(wlStr)].values = kdp_M1
 
             if scatSet['mode'] == 'table':
                 print('fast LUT mode')
