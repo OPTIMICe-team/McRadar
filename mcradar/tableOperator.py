@@ -30,9 +30,7 @@ def getMcSnowTable(mcSnowPath):
     #change to pandas dataframe, since McRadar has been working with that
     selMcTable = mcTableXR.to_dataframe() 
     print('to_dataframe()')
-    selTime = 600.
-    times = selMcTable['time']
-    selMcTable = selMcTable[times==selTime]
+    
     #selMcTable = mcTable.copy()
     selMcTable['vel'] = -1. * selMcTable['vel']
     selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
@@ -41,8 +39,12 @@ def getMcSnowTable(mcSnowPath):
     selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
     if 'sPhi' not in selMcTable:
       selMcTable['sPhi'] = 1.0 # simply add sPhi = 1
-    
-    selMcTable = calcRhophys(selMcTable)
+    if 'sRho_tot' not in selMcTable:
+      try:
+        selMcTable = calcRhophys(selMcTable)
+      except:
+        print("oops, total density can not be calculated, please check if all necessary masses and volumes are in your McSnow output")
+      
     selMcTable = calcRho(selMcTable)
     #selMcTable['sRho'] = 6.0e-3*mcTable.mTot/(np.pi*mcTable.dia**3*mcTable.sPhi**(-2+3*(mcTable.sPhi<1).astype(int)))
             
