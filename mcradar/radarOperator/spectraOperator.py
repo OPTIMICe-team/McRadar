@@ -101,7 +101,7 @@ def convoluteSpec(spec,wl,vel,eps,noise_pow,nave,theta,u_wind,time_avg,height):
 
     L_s = u_wind*time_avg + 2*height*np.sin(theta)
     L_lam = wl/2    
-    sigma_t2 = 3/4*(eps/2*np.pi)^(2/3)*( L_s**(2/3) - L_lam**(2/3) )
+    sigma_t2 = 3/4*(eps/2*np.pi)**(2/3)*( L_s**(2/3) - L_lam**(2/3) )
     
     spec_turb = np.zeros(len(vel))#spec.copy()*np.NaN
     dv = np.diff(vel)[0]
