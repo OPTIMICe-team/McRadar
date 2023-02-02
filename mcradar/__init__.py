@@ -17,3 +17,5 @@ from .radarOperator.zeOperator import calcParticleZe
 from .radarOperator.kdpOperator import getIntKdp
 
 from .fullRadarOperator import fullRadar
+
+from .fullRadarOperator import singleParticleTrajectories
