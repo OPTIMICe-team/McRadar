@@ -47,4 +47,11 @@ scatterer.thet = scatterer.thet0
 scatterer.phi = (scatterer.phi0) % 360. #KDP geometry
 S = scatterer.get_S()
 sMat = (S[1,1]-S[0,0]).real
-print('Results ', back_hh, back_vv, sMat, ' DONE')
+Z = scatterer.get_Z()
+Z11 = Z[0,0]; Z12 = Z[0,1]; Z21 = Z[1,0]; Z22 = Z[1,1]; Z33 = Z[2,2]; Z44 = Z[3,3]
+S11i = S[0,0].imag
+S22i = S[1,1].imag
+print('Results ', back_hh, back_vv, sMat, Z11, Z12, Z21, Z22, Z33, Z44, S11i, S22i, ' DONE')
+
+
+
