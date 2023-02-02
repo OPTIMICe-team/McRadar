@@ -15,7 +15,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                  heightRes=50, gridBaseArea=1,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
-    #TODO: make SSRGA dependent on aspect ratio, since alpha_eff depents on it and if we have crystals it of course makes a difference there. Also think about having the LUT not sorted by size but rather mass
+    #TODO: make SSRGA dependent on aspect ratio, since alpha_eff depents on it and if we have crystals it of course makes a difference there. Also think about having the LUT not sorted by size but rather mass. I could calculate diameter in direction of travel (so vertical extend) from Dmax and ar.
     """
     This function defines the settings for starting the 
     calculation.
@@ -51,8 +51,10 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                           Also here no polarimetry so far, therefore separate mode from LUT, will change in future?
                           This mode uses Rayleigh for all particles, regardless of monomer number. 
                           Careful: only use Rayleigh with low frequency such as C,S or X-Band. You need to specify LUT path.
-                        - SSRGA-Rayleigh --> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.  
-      scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA', 'Rayleigh' or 'SSRGA-Rayleigh' the path to the lut.nc files is required
+                        - SSRGA-Rayleigh --> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
+                        - DDA -> this mode uses DDA table. Sofar only Dendrite and for X and W-Band. Selection is only based on size, no ar. 
+                          We need to think about how to change that in the future  
+      scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA' or 'SSRGA-Rayleigh' or 'DDA' the path to the lut.nc files is required
       scatSet['particle_name']: in case scatSet['mode'] is either 'SSRGA' or 'SSRGA-Rayleigh' the name of the particle to use SSRGA parameters is required. For a list of names see snowScatt. 
                                 A few examples: 'vonTerzi_dendrite' 
 
@@ -110,10 +112,10 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'testLUT*.nc') # TODO: change back to old file name!!
-                listFreq = [l.split('testLUT_')[-1].split('.nc')[0].split('Hz_')[0] for l in lutFiles]
+                lutFiles = glob(scatSet['lutPath']+'LUT*.nc') # TODO: change back to old file name!!
+                listFreq = [l.split('LUT_')[-1].split('.nc')[0].split('Hz_')[0] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
-                listElev = [l.split('testLUT_')[-1].split('.nc')[0].split('Hz_')[-1] for l in lutFiles]
+                listElev = [l.split('LUT_')[-1].split('.nc')[0].split('Hz_')[-1] for l in lutFiles]
                 listElev = list(dict.fromkeys(listElev))
                 dicSettings['scatSet']['lutFreq'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElev'] = [int(e) for e in listElev]
@@ -131,15 +133,17 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         print(msg)
     elif (scatSet['mode'] == 'SSRGA') or (scatSet['mode'] == 'SSRGA-Rayleigh'):
         print(scatSet)
+        #dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
         if (scatSet['mode'] == 'SSRGA'):
-            print('with mode SSRGA, no polarimetric output is generated. Sofar, only elevation = 90° is possible.')
+            print('with mode SSRGA, no polarimetric output is generated.')
         else:
-            print('SSRGA for aggregates and Rayleigh for monomers. No polarimetric output is generated. Sofar, only elevation = 90° possible.')
+            print('SSRGA for aggregates and Rayleigh for monomers. No polarimetric output is generated.')
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 if 'particle_name' in scatSet.keys():
                     msg = 'Using LUTs in ' + scatSet['lutPath']
                     lutFile = scatSet['lutPath']+scatSet['particle_name']+'_LUT.nc'
+                    print(lutFile)
                     dicSettings['scatSet']['lutFile'] = lutFile
                 else:
                     msg = ('n').join(['with this scattering mode ', scatSet['mode'],
@@ -158,10 +162,35 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
             dicSettings = None
         print(msg)
     elif scatSet['mode'] == 'Rayleigh':
+        dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
         print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated. Also: only 90° elevation')
-    
+    elif scatSet['mode'] == 'DDA': 
+        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystals')
+        if 'lutPath' in scatSet.keys():
+            if os.path.exists(scatSet['lutPath']):
+                msg = 'Using LUTs in ' + scatSet['lutPath']
+                if scatSet['particle_name'] == 'dendrites':
+                    lutFile = scatSet['lutPath']+'DDA_tables/scattering_table_dendrites.nc'
+                elif 'beta' and 'gamma' in scatSet['particle_name']:
+                    lutFile = scatSet['lutPath']+'DDA_tables/scattering_table_{0}.nc'.format(scatSet['particle_name'])
+                print(lutFile)
+                dicSettings['scatSet']['lutFile'] = lutFile
+                
+            else:
+                msg = ('\n').join(['with this scattering mode ', scatSet['mode'],
+                                   'a valid path to the scattering LUT is required',
+                                   scatSet['lutPath'], 'is not valid, check your settings'])
+                dicSettings = None
+                
+        else:
+            msg = ('\n').join(['with this scattering mode ', scatSet['mode'],
+                               'a valid path to the scattering LUT is required',
+                               'check your settings'])
+            dicSettings = None
+        
+        print(msg)
     elif scatSet['mode'] != 'full':
-        print('scatSet[mode] must be either full (default), table or wisdom or SSRGA')
+        print('scatSet[mode] must be either full (default), table or wisdom or SSRGA or Rayleigh or SSRGA-Rayleigh or DDA')
         dicSettings = None
 
     return dicSettings
