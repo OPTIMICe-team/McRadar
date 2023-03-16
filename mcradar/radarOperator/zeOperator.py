@@ -9,8 +9,10 @@ from pytmatrix.tmatrix import Scatterer
 from pytmatrix import psd, orientation, radar
 from pytmatrix import refractive, tmatrix_aux
 from scipy import constants
+from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
 import matplotlib.pyplot as plt
+import pandas as pd
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
@@ -198,8 +200,10 @@ def radarScat(sp, wl, K2=0.93):
     prefactor = 2*np.pi*wl**4/(np.pi**5*K2)
     #print(sp.Z11.values)
     #quit()
-    reflect_hh = prefactor*(sp.Z11 - sp.Z12 - sp.Z21 + sp.Z22).values
-    reflect_vv = prefactor*(sp.Z11 + sp.Z12 + sp.Z21 + sp.Z22).values
+    #reflect_hh = prefactor*(sp.Z11 - sp.Z12 - sp.Z21 + sp.Z22).values #TODO why is it here the other way around compared to what Davide has in his notebooks???
+    #reflect_vv = prefactor*(sp.Z11 + sp.Z12 + sp.Z21 + sp.Z22).values
+    reflect_hh = prefactor*(sp.Z11+sp.Z22+sp.Z12+sp.Z21).values
+    reflect_vv = prefactor*(sp.Z11+sp.Z22-sp.Z12-sp.Z21).values
     kdp = 1e-3*(180.0/np.pi)*wl*sp.S22r_S11r.values
 
     reflect_hv = prefactor*(sp.Z11 - sp.Z12 + sp.Z21 - sp.Z22).values
@@ -217,6 +221,103 @@ def radarScat(sp, wl, K2=0.93):
 
     return reflect_hh, reflect_vv, kdp, ldr_h, rho_hv
 
+def rational3d(x,y,z,a,b):
+    if len(a)==17 and len(b)==9:
+        z = rat3dp26(x,y,z,a,b)
+    elif len(a)==13 and len(b)==12:
+        z = rat3dp25(x,y,z,a,b)
+    elif len(a)==13 and len(b)==9:
+        z = rat3dp22(x,y,z,a,b)
+    elif len(a)==10 and len(b)==9:
+        z = rat3dp19(x,y,z,a,b)
+    elif len(a)==9 and len(b)==8:
+        z = rat3dp17x(x,y,z,a,b)
+    elif len(a)==8 and len(b)==7:
+        z = rat3dp15(x,y,z,a,b)
+    elif len(a)==7 and len(b)==6:
+        z = rat3dp13(x,y,z,a,b)
+    elif len(a)==4 and len(b)==3:
+        z = rat3dp7(x,y,z,a,b)
+    return z
+
+def rat3dp26(x, y, z, a, b):
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*y*z+a[8]*z*z+a[9]*x*z \
+            +a[10]*x*x*x+a[11]*y*y*y+a[12]*z*z*z++a[13]*x*x*z+a[14]*y*y*z+a[15]*x*z*z+a[16]*y*z*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*y*z+b[7]*z*z+b[8]*x*z
+    return p/q
+
+def rat3dp25(x, y, z, a, b):
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*y*z+a[8]*z*z+a[9]*x*z+a[10]*x*x*x+a[11]*y*y*y+a[12]*z*z*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*y*z+b[7]*z*z+b[8]*x*z+b[9]*x*x*x+b[10]*y*y*y+b[11]*z*z*z
+    return p/q
+
+def rat3dp22(x, y, z, a, b):
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*y*z+a[8]*z*z+a[9]*x*z+a[10]*x*x*x+a[11]*y*y*y+a[12]*z*z*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*y*z+b[7]*z*z+b[8]*x*z
+    return p/q
+
+def rat3dp19(x, y, z, a, b):
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*y*z+a[8]*z*z+a[9]*x*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*y*z+b[7]*z*z+b[8]*x*z
+    return p/q
+
+def rat3dp17x(x, y, z, a, b): # ohne den gemischten Term in y*z
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*z*z+a[8]*x*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*z*z+b[7]*x*z
+    return p/q
+
+def rat3dp17y(x, y, z, a, b): # ohne den gemischten Term in x*z
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*z*z+a[8]*y*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*z*z+b[7]*y*z
+    return p/q
+
+def rat3dp15(x, y, z, a, b): # ohne beide gemischte Terme in x*z und y*z
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*z*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*z*z
+    return p/q
+
+def rat3dp13(x, y, z, a, b): # ohne beide gemischte Terme in x*z und y*z
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z+a[4]*x*x+a[5]*y*y+a[6]*z*z #+a[5]*x*y
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z+b[3]*x*x+b[4]*y*y+b[5]*z*z #b[4]*x*y
+    return p/q
+def rat3dp7(x, y, z, a, b): # ohne beide gemischte Terme in x*z und y*z
+    p = a[0]+a[1]*x+a[2]*y+a[3]*z #+a[4]*x*x+a[5]*x*y+a[6]*y*y+a[7]*z*z
+    q = 1.0+b[0]*x+b[1]*y+b[2]*z #+b[3]*x*x+b[4]*x*y+b[5]*y*y+b[6]*z*z
+    return p/q
+
+def get_ab_from_params(p):
+    n = len(p)
+    if n == 26:
+        a,b = p[0:17],p[17:26]
+    elif n == 25:
+        a,b = p[0:13],p[13:25]
+    elif n == 22:
+        a,b = p[0:13],p[13:22]
+    elif n == 19:
+        a,b = p[0:10],p[10:19]
+    elif n == 17:
+        a,b = p[0:9],p[9:17]
+    elif n == 15:
+        a,b = p[0:8],p[8:15]
+    elif n == 13:
+        a,b = p[0:7],p[7:13]
+    elif n == 11:
+        a,b = p[0:6],p[6:11]
+    elif n == 7:
+        a,b = p[0:4],p[4:7]
+    
+    return a,b
+
+def _rational(M, *args):
+	# This is the callable function that is passed to curve_fit. M is a (3,N) array
+	# where N is the total number of data points in Z, which will be raveled
+	# to one dimension. The rewrite as a one-dimensional function is necessary for using 
+	# curve_fit, which supports only one-dimensional functions.
+
+    x,y,z = M
+    a,b = get_ab_from_params(args)
+    var = rational3d(x,y,z,a,b)
+    return var
     
 def calcParticleZe(wls, elv, mcTable, ndgs=30,
                    scatSet={'mode':'full', 'safeTmatrix':False}, K2=0.93):#zeOperator
@@ -394,44 +495,106 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
               mcTable['sKDP_{0}'.format(wlStr)] = np.nan
     
     elif scatSet['mode'] == 'DDA':
+        #-- this option uses the DDA scattering tables.
+        #-- couple this with SSRGA! TODO: use DDA scattering table for aggregates as well (we have dendrites there right now)
+        ##calculation of the reflectivity for AR < 1
+        #print('DDA selected, only possible for plate-like particles at the moment. Also, scattering of aggregates gets calulated with SSRGA')
+        mcTabledendrite = mcTable[mcTable['sPhi']<1].copy()
+        mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
+        elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))]
+        elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
         
-        
+        #print('elevation ', elv,'lut elevation ', elvSel)        
         for wl in wls:
-            
-            dataset_filename = scatSet['lutFile'] 
+            wlStr = '{:.2e}'.format(wl)
+            f = 299792458e3/wl
+            freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))]
+            freSel = str(freSel).ljust(6,'0')#
+            #print('frequency ', f/1.e9, 'lut frequency ', freSel)
+            dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrites_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) 
             lut = xr.open_dataset(dataset_filename)
             #print(lut)
+            #print(lut.wavelength)
+            if len(mcTabledendrite)>0:
+                lutsel = lut.sel(wavelength=wl*1e-3, elevation=elv,method='nearest')
+                points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the correct value
+                                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
+                                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
+                points['S22r_S11r'] = points.S22r - points.S11r 
+                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
+            else:
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
+            #- now for aggregates
+            if len(mcTableAgg.mTot)>0:
+                freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]
+                freSel = str(freSel).ljust(6,'0')#
+                #print('frequency ', f/1.e9, 'lut frequency ', freSel)
+                dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                lut = xr.open_dataset(dataset_filename)
+                lut = lut.sel(elevation = elv, wavelength=wl,method='nearest')
+                points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'))
             
-            # now select new points in lut and calculate reflect,...
-            # I have the problem that not all aspect ratios and masses are actually filled, so I need to find a way to select only points where there is actual data
-            # first lets select only wavelength, elevation (and later size, because this should be completely filled)
-            points = lut.sel(wavelength=wl*1e3, elevation=elv,
-                             method='nearest')
+                points['S22r_S11r'] = points.S22r - points.S11r 
+                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_h
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_v
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = kdp_M1
+            else:
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1]= np.nan
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
             
-            points = lut.sel(wavelength=wl*1e3, elevation=elv,
-                             Dmax=xr.DataArray(mcTable['dia'].values, dims='points'),
-                             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-                             mass=xr.DataArray(mcTable['mTot'].values, dims='points'),
-                             method='nearest')
-            points['S22r_S11r'] = points.S11r - points.S22r
-            reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points*1e3, wl)
-            
+    elif scatSet['mode'] == 'DDA_rational':
+        mcTabledendrite = mcTable[mcTable['sPhi']<1].copy()
+        
+        mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
+        for wl in wls:
             wlStr = '{:.2e}'.format(wl)
-            
-            mcTable['sZeH_{0}'.format(wlStr)] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)] = kdp_M1
-            #quit()
-    
-    
+            if len(mcTabledendrite)>0:
+                #elvSel = scatSet['lutElev'][np.argmin(np.abs(np.array(scatSet['lutElev'])-elv))] 
+                fitting_params = '/project/meteo/work/L.Terzi/pol-scatt/DDA_dendrites/fitting_parameters_rationalFunc_p22_freq9.6000_elv30.txt'#.format(freSel, int(elvSel)) 
+                pfitAll = pd.read_csv(fitting_params,delimiter=' ')
+                # for all variables:
+                pointsDic = {'Z11':0,'Z12':0,'Z21':0,'Z22':0,'S11r':0,'S22r':0,'S11i':0,'S22i':0}
+                for var in pointsDic.keys():
+                    pfit = pfitAll[var]
+                    afit,bfit = get_ab_from_params(pfit.values)
+                    fit = rational3d(np.log10(mcTabledendrite.mTot.values),np.log10(mcTabledendrite.dia.values),np.log10(mcTabledendrite.sPhi.values),afit,bfit)
+                    if var in ['Z11','Z12','Z21','Z22']:
+                        fit = 10**fit*1e6 # in mm**2
+                    else:
+                        fit = 10**fit*1e3  #in mm
+                    pointsDic[var] = fit
+                #print('elevation ', elv,'lut elevation ', elvSel)        
+                points = pd.DataFrame.from_dict(pointsDic)
+                #print(points)
+                points['S22r_S11r'] = points.S22r - points.S11r 
+                #plt.plot(mcTabledendrite.dia,points.Z11)
+                #plt.show()
+                #quit()
+                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+                #ZDR = 10*np.log10(reflect_h)-10*np.log10(reflect_v)
+                #print(ZDR)
+                #plt.plot(mcTabledendrite.dia,ZDR)
+                #plt.plot(mcTabledendrite.dia,10*np.log10(reflect_v))
+                #plt.show()
+                #quit()
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h 
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
+            else:
+                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
+                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
+                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
     elif scatSet['mode'] == 'interpolate': # interpolation fails if no selection is possible
         elvSel = scatSet['lutElev'][np.argmin(np.abs(np.array(scatSet['lutElev'])-elv))]
         print('elevation ', elv,'lut elevation ', elvSel)
-        #if scatSet['mode'] == 'table':
-        #    print('fast LUT mode')
-
-        #elif scatSet['mode'] == 'wisdom':            
-        #    print('less fast cache adaptive mode')
         
         for wl in wls:
             f = 299792458e3/wl
