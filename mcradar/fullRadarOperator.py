@@ -48,7 +48,7 @@ def fullRadar(dicSettings, mcTable):
         tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'],
                                     dicSettings['velCenterBin'], heightEdge1,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
                                     dicSettings['eps_diss'], dicSettings['uwind'], dicSettings['time_int'], dicSettings['theta']/2./180.*np.pi, scatSet=dicSettings['scatSet'] )
-
+        
         #volume normalization
         tmpSpecXR = tmpSpecXR/vol
         specXR = xr.merge([specXR, tmpSpecXR])
@@ -89,19 +89,22 @@ def singleParticleTrajectories(dicSettings, mcTable):
     for i, pID in enumerate(mcTable['sMult'].unique()):
     
         mcTableTmp = mcTable[(mcTable['sMult']==pID)].copy()
-       
+        
         print(len(mcTable['sMult'].unique()),i)
         mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
                                     mcTableTmp, ndgs=dicSettings['ndgsVal'],
                                     scatSet=dicSettings['scatSet'])
+        print('done with scattering')
         mcTableTmp = mcTableTmp.set_index('sHeight')
         specTable = mcTableTmp.to_xarray()
+        
         specTable = specTable.reindex(sHeight=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
         specTable = specTable.drop_vars('sMult')
         specTable = specTable.expand_dims(dim='sMult').assign_coords(sMult=[pID])
         
         #specTable = specTable.expand_dims(dim='range').assign_coords(range=[centerHeight])
         specXR = xr.merge([specXR, specTable])
+        
         #print(specXR)
         #quit()
 
