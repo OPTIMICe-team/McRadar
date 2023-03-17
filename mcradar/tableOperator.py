@@ -40,7 +40,7 @@ def getMcSnowTable(mcSnowPath):
     selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
     if 'sPhi' not in selMcTable:
       selMcTable['sPhi'] = 1.0 # simply add sPhi = 1
-    selMcTable['sRho_tot_g'] = selMcTable['sRho_tot']*1e-3 # in g/cm³
+    selMcTable['sRho_tot_gmm'] = selMcTable['sRho_tot']*1e-6 # in g/mm³
     #if 'sRho_tot' not in selMcTable:
     #  try:
     #    selMcTable = calcRhophys(selMcTable)

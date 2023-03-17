@@ -357,7 +357,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         
         radii_M1 = tmpTable['radii_mm'].values #[mm]
         as_ratio_M1 = tmpTable['sPhi'].values
-        rho_M1 = tmpTable['sRho_tot_g'].values #[g/cm^3]
+        rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
 
         for wl in wls:
                     
@@ -383,7 +383,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         
         radii_M1 = (tmpTable['radii_mm']).values #[mm]
         as_ratio_M1 = tmpTable['sPhi'].values
-        rho_M1 = tmpTable['sRho_tot'].values #[g/cm^3]
+        rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
 
         for wl in wls:
         
