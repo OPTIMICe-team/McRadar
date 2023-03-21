@@ -52,8 +52,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                           This mode uses Rayleigh for all particles, regardless of monomer number. 
                           Careful: only use Rayleigh with low frequency such as C,S or X-Band. You need to specify LUT path.
                         - SSRGA-Rayleigh --> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
-                        - DDA -> this mode uses DDA table. Sofar only Dendrite and for X and W-Band. Selection is only based on size, no ar. 
-                          We need to think about how to change that in the future  
+                        - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. With DDA you need to specify a particle, choose between dendrite and column. You also need to specify the path to the LUT.  
+                          
       scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA' or 'SSRGA-Rayleigh' or 'DDA' the path to the lut.nc files is required
       scatSet['particle_name']: in case scatSet['mode'] is either 'SSRGA' or 'SSRGA-Rayleigh' the name of the particle to use SSRGA parameters is required. For a list of names see snowScatt. 
                                 A few examples: 'vonTerzi_dendrite' 
@@ -170,13 +170,15 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrites_freq*.nc') 
-                listFreq = [l.split('DDA_LUT_dendrites_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_'+scatSet['particle_name']+'_freq*.nc') 
+                
+                listFreq = [l.split('DDA_LUT_'+scatSet['particle_name']+'_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
                 listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles]
                 listElev = list(dict.fromkeys(listElev))
                 dicSettings['scatSet']['lutFreqMono'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElevMono'] = [int(e) for e in listElev]
+                dicSettings['scatSet']['LUTFilesMono'] = lutFiles
                 #- now same for aggregates
                 lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrite_aggregates_freq*.nc') 
                 #listFreq = [l.split('LUT_dendrite_aggregates')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
@@ -186,6 +188,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                 listElev = list(dict.fromkeys(listElev))
                 dicSettings['scatSet']['lutFreqAgg'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElevAgg'] = [int(e) for e in listElev]
+                dicSettings['scatSet']['LUTFilesAgg'] = lutFiles
+                
                 
             else:
                 msg = ('\n').join(['with this scattering mode ', scatSet['mode'],
