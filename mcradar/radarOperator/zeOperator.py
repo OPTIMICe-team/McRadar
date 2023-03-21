@@ -13,6 +13,8 @@ from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
 import matplotlib.pyplot as plt
 import pandas as pd
+import warnings
+
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
@@ -472,27 +474,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
               mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
             else:
               mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
-    elif scatSet['mode'] == 'DDA_old':
-        lut = xr.open_dataset(scatSet['lutFile'])
-        for wl in wls:
-            wlStr = '{:.2e}'.format(wl)
-            freq = (constants.c / wl*1e3)
-            prefactor = 2*np.pi*wl**4/(np.pi**5*K2)
-            points = lut.sel(frequency=freq, elevation=elv, 
-                             Dmax = xr.DataArray(mcTable['dia'].values, dims='points'),
-                             method='nearest')
-            if len(points.cbck_hh)>0: # only if we have aggregates this works. Otherwise we need to write nan here
-              ssCbckhh = points.cbck_hh.values#*1e6 # in mm^3 
-              #print(ssCbckhh)
-              ssCbckvv = points.cbck_vv.values#*1e6
-              KDP = points.kdp.values
-              mcTable['sZeH_{0}'.format(wlStr)] = prefactor * ssCbckhh * 1e18 # 1e18 to convert to mm6/m3
-              mcTable['sZeV_{0}'.format(wlStr)] = prefactor * ssCbckvv * 1e18 # 1e18 to convert to mm6/m3
-              mcTable['sKDP_{0}'.format(wlStr)] = KDP
-            else:
-              mcTable['sZeH_{0}'.format(wlStr)] = np.nan
-              mcTable['sZeV_{0}'.format(wlStr)] = np.nan
-              mcTable['sKDP_{0}'.format(wlStr)] = np.nan
+    
     
     elif scatSet['mode'] == 'DDA':
         #-- this option uses the DDA scattering tables.
@@ -511,7 +493,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
             freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
             freSel = str(freSel).ljust(6,'0')#
             #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-            dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrites_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+            dataset_filename = scatSet['lutPath'] + 'DDA_LUT_'+scatSet['particle_name']+'_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
             lut = xr.open_dataset(dataset_filename) # read in LUT
             #print(lut)
             #print(lut.wavelength)
@@ -526,6 +508,10 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
                 mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
                 mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
                 mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
+                if (points.Z11flag==1).any():
+                	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                	
+                	 
             else: # if no plates
                 mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
                 mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
