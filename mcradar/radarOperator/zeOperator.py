@@ -498,7 +498,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
             #print(lut)
             #print(lut.wavelength)
             if len(mcTabledendrite)>0: # only possible if we have plate-like particles
-                lutsel = lut.sel(wavelength=wl*1e-3, elevation=elv,method='nearest') # select nearest wl and elevation TODO: make wavelength in mm
+                lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation 
                 points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
                                     aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
                                     mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
@@ -509,6 +509,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
                 mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
                 mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
                 if (points.Z11flag==1).any():
+                	
                 	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                 	
                 	 
