@@ -8,7 +8,7 @@ from pytmatrix import psd, orientation, radar
 from pytmatrix import refractive, tmatrix_aux
 
 
-def getIntKdp(wls, mcTable, centerHeight):
+def getIntKdp(wls, elvs, mcTable, centerHeight):
     """
     Calculates the integrated kdp of a distribution 
     of particles.
@@ -28,15 +28,33 @@ def getIntKdp(wls, mcTable, centerHeight):
     tmpKdp = xr.Dataset()
         
     for wl in wls:
-        
-        wlStr = '{:.2e}'.format(wl)
-        mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
-        kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
-                             dims=('range'),
-                             coords={'range':centerHeight[np.newaxis]},
-                             name='kdpInt_{0}'.format(wlStr))
-        
-        tmpKdp = xr.merge([tmpKdp, kdpXR])
+        for elv in elvs:
+            mcTabledendrite = mcTable[mcTable['sPhi']<1].copy() # select only plates
+            mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
+            wlStr = '{:.2e}'.format(wl)
+            mcTable['sKDPMult_{0}_elv{1}'.format(wlStr,elv)] = mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)] * mcTable['sMult']
+            kdpXR = xr.DataArray(mcTable['sKDPMult_{0}_elv{1}'.format(wlStr,elv)].sum()[np.newaxis],
+                                 dims=('range'),
+                                 coords={'range':centerHeight[np.newaxis]},
+                                 name='kdpInt_{0}_elv{1}'.format(wlStr,elv))
+            
+            tmpKdp = xr.merge([tmpKdp, kdpXR])
+            #- now only dendrites
+            mcTabledendrite['sKDPMult_{0}_elv{1}'.format(wlStr,elv)] = mcTabledendrite['sKDP_{0}_elv{1}'.format(wlStr,elv)] * mcTabledendrite['sMult']
+            kdpXRMono = xr.DataArray(mcTabledendrite['sKDPMult_{0}_elv{1}'.format(wlStr,elv)].sum()[np.newaxis],
+                                 dims=('range'),
+                                 coords={'range':centerHeight[np.newaxis]},
+                                 name='kdpIntMono_{0}_elv{1}'.format(wlStr,elv))
+            
+            tmpKdp = xr.merge([tmpKdp, kdpXR])
+            
+            mcTableAgg['sKDPMult_{0}_elv{1}'.format(wlStr,elv)] = mcTableAgg['sKDP_{0}_elv{1}'.format(wlStr,elv)] * mcTableAgg['sMult']
+            kdpXRAgg = xr.DataArray(mcTableAgg['sKDPMult_{0}_elv{1}'.format(wlStr,elv)].sum()[np.newaxis],
+                                 dims=('range'),
+                                 coords={'range':centerHeight[np.newaxis]},
+                                 name='kdpIntAgg_{0}_elv{1}'.format(wlStr,elv))
+            
+            tmpKdp = xr.merge([tmpKdp, kdpXR,kdpXRMono,kdpXRAgg])
     
     return tmpKdp
 

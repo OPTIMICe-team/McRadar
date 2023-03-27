@@ -25,7 +25,7 @@ def getVelIntSpec(mcTable, mcTable_binned, variable):
     return mcTableVelIntegrated
 
 
-def getMultFrecSpec(wls, mcTable, velBins, velCenterBins , centerHeight, convolute,nave,noise_pow,eps_diss,uwind,time_int,theta,scatSet={'mode':'full', 'safeTmatrix':False}):
+def getMultFrecSpec(wls,elvs, mcTable, velBins, velCenterBins , centerHeight, convolute,nave,noise_pow,eps_diss,uwind,time_int,theta,scatSet={'mode':'full', 'safeTmatrix':False}):
     """
     Calculation of the multi-frequency spectrograms 
     
@@ -48,32 +48,32 @@ def getMultFrecSpec(wls, mcTable, velBins, velCenterBins , centerHeight, convolu
     tmpDataDic = {}
      
     for wl in wls:
-    
-        wlStr = '{:.2e}'.format(wl)
-        
-        if (scatSet['mode'] == 'SSRGA') or (scatSet['mode'] == 'Rayleigh') or (scatSet['mode'] == 'SSRGA-Rayleigh'):
-          mcTable['sZeMultH_{0}'.format(wlStr)] = mcTable['sZeH_{0}'.format(wlStr)] * mcTable['sMult']
-          #print(mcTable['sMult'])
-          #plt.plot(mcTable['sZeMultH_{0}'.format(wlStr)],mcTable['radii_mm'],label='Mult')
-          #plt.plot(mcTable['sZeH_{0}'.format(wlStr)],mcTable['radii_mm'],label='sZe')
-          #plt.legend()
-          #plt.show()
-          intSpecH = getVelIntSpec(mcTable, mcTable_binned,'sZeMultH_{0}'.format(wlStr))
-          if convolute == True:
-              intSpecH = convoluteSpec(intSpecH,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
-          tmpDataDic['spec_H_{0}'.format(wlStr)] = intSpecH.values[:,0]
-        
-        else:
-          mcTable['sZeMultH_{0}'.format(wlStr)] = mcTable['sZeH_{0}'.format(wlStr)] * mcTable['sMult']
-          mcTable['sZeMultV_{0}'.format(wlStr)] = mcTable['sZeV_{0}'.format(wlStr)] * mcTable['sMult']
+        for elv in elvs:
+            wlStr = '{:.2e}'.format(wl)
+            
+            if (scatSet['mode'] == 'SSRGA') or (scatSet['mode'] == 'Rayleigh') or (scatSet['mode'] == 'SSRGA-Rayleigh'):
+              mcTable['sZeMultH_{0}_elv{1}'.format(wlStr,elv)] = mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] * mcTable['sMult']
+              #print(mcTable['sMult'])
+              #plt.plot(mcTable['sZeMultH_{0}'.format(wlStr)],mcTable['radii_mm'],label='Mult')
+              #plt.plot(mcTable['sZeH_{0}'.format(wlStr)],mcTable['radii_mm'],label='sZe')
+              #plt.legend()
+              #plt.show()
+              intSpecH = getVelIntSpec(mcTable, mcTable_binned,'sZeMultH_{0}_elv{1}'.format(wlStr,elv))
+              if convolute == True:
+                  intSpecH = convoluteSpec(intSpecH,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+              tmpDataDic['spec_H_{0}'.format(wlStr)] = intSpecH.values[:,0]
+            
+            else:
+              mcTable['sZeMultH_{0}_elv{1}'.format(wlStr,elv)] = mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] * mcTable['sMult']
+              mcTable['sZeMultV_{0}_elv{1}'.format(wlStr,elv)] = mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)] * mcTable['sMult']
 
-          intSpecH = getVelIntSpec(mcTable, mcTable_binned,'sZeMultH_{0}'.format(wlStr))
-          intSpecV = getVelIntSpec(mcTable, mcTable_binned, 'sZeMultV_{0}'.format(wlStr))
-          if convolute == True:
-              intSpecH = convoluteSpec(intSpecH,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
-              intSpecV = convoluteSpec(intSpecV,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
-          tmpDataDic['spec_H_{0}'.format(wlStr)] = intSpecH.values[:,0]
-          tmpDataDic['spec_V_{0}'.format(wlStr)] = intSpecV.values[:,0]
+              intSpecH = getVelIntSpec(mcTable, mcTable_binned,'sZeMultH_{0}_elv{1}'.format(wlStr,elv))
+              intSpecV = getVelIntSpec(mcTable, mcTable_binned, 'sZeMultV_{0}_elv{1}'.format(wlStr,elv))
+              if convolute == True:
+                  intSpecH = convoluteSpec(intSpecH,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+                  intSpecV = convoluteSpec(intSpecV,wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+              tmpDataDic['spec_H_{0}_elv{1}'.format(wlStr,elv)] = intSpecH.values[:,0]
+              tmpDataDic['spec_V_{0}_elv{1}'.format(wlStr,elv)] = intSpecV.values[:,0]
         
         
 

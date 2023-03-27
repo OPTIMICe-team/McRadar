@@ -321,7 +321,7 @@ def _rational(M, *args):
     var = rational3d(x,y,z,a,b)
     return var
     
-def calcParticleZe(wls, elv, mcTable, ndgs=30,
+def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                    scatSet={'mode':'full', 'safeTmatrix':False}, K2=0.93):#zeOperator
     """
     Calculates the horizontal and vertical reflectivity of 
@@ -344,7 +344,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
     """
     
     #calling the function to create output columns
-    mcTable = creatRadarCols(mcTable, wls)
+    mcTable = creatRadarCols(mcTable, wls,elvs)
     #print('mcTable has ', len(mcTable))
 
     if scatSet['mode'] == 'full':
@@ -362,82 +362,84 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
 
         for wl in wls:
-                    
-            singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
-                                             rho_M1, elv, canting=canting, 
-                                             cantingStd=cantingStd, 
-                                             meanAngle=meanAngle, ndgs=ndgs,
-                                             safeTmatrix=scatSet['safeTmatrix'])
-            reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-            wlStr = '{:.2e}'.format(wl)
-            mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
+            for elv in elvs:            
+                singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
+                                                 rho_M1, elv, canting=canting, 
+                                                 cantingStd=cantingStd, 
+                                                 meanAngle=meanAngle, ndgs=ndgs,
+                                                 safeTmatrix=scatSet['safeTmatrix'])
+                reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                wlStr = '{:.2e}'.format(wl)
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_h
+                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_v
+                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = kdp_M1
 
 
-        ##calculation of the reflectivity for AR >= 1
-        tmpTable = mcTable[mcTable['sPhi']>=1].copy()
-        
-        #particle properties
-        canting=True
-        meanAngle=90
-        cantingStd=1
-        
-        radii_M1 = (tmpTable['radii_mm']).values #[mm]
-        as_ratio_M1 = tmpTable['sPhi'].values
-        rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
+            ##calculation of the reflectivity for AR >= 1
+            tmpTable = mcTable[mcTable['sPhi']>=1].copy()
+            
+            #particle properties
+            canting=True
+            meanAngle=90
+            cantingStd=1
+            
+            radii_M1 = (tmpTable['radii_mm']).values #[mm]
+            as_ratio_M1 = tmpTable['sPhi'].values
+            rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
 
-        for wl in wls:
-        
-            singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
-                                             rho_M1, elv, canting=canting, 
-                                             cantingStd=cantingStd, 
-                                             meanAngle=meanAngle, ndgs=ndgs,
-                                             safeTmatrix=scatSet['safeTmatrix'])
-            reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-            wlStr = '{:.2e}'.format(wl)
-            mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']>=1] = kdp_M1
+            for wl in wls:
+            
+                singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
+                                                 rho_M1, elv, canting=canting, 
+                                                 cantingStd=cantingStd, 
+                                                 meanAngle=meanAngle, ndgs=ndgs,
+                                                 safeTmatrix=scatSet['safeTmatrix'])
+                reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                wlStr = '{:.2e}'.format(wl)
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = reflect_h
+                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = reflect_v
+                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = kdp_M1
 
     elif scatSet['mode'] == 'SSRGA':
         print('using SSRGA scattering table for all particles, elevation is set to 90')
         lut = xr.open_dataset(scatSet['lutFile'])
         for wl in wls:
-            freq = (constants.c / wl*1e3)
-            #print(freq)
-            #quit()
-            mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
-            points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
-                             size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
-                             method='nearest')
-            #points = lut.sel(wavelength=wl*1e-3, elevation=90.0, # sofar: elevation can only be 90, we need more SSRGA calculations for other elevation
-            #                 size = xr.DataArray(mcTable['dia'].values, dims='points'),
-            #                 method='nearest')
-            ssCbck = points.Cbck.values#*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
-            
-            prefactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
-            wlStr = '{:.2e}'.format(wl)
-            mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18
-            mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']==1] = np.nan
+            for elv in elvs:
+                freq = (constants.c / wl*1e3)
+                #print(freq)
+                #quit()
+                mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
+                points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
+                                 size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
+                                 method='nearest')
+                #points = lut.sel(wavelength=wl*1e-3, elevation=90.0, # sofar: elevation can only be 90, we need more SSRGA calculations for other elevation
+                #                 size = xr.DataArray(mcTable['dia'].values, dims='points'),
+                #                 method='nearest')
+                ssCbck = points.Cbck.values#*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
+                
+                prefactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
+                wlStr = '{:.2e}'.format(wl)
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
     elif scatSet['mode'] == 'Rayleigh':
         print('using Rayleigh approximation for all particles, only elevation 90 so far')
         for wl in wls:
-            '''
-            # rayleigh approximation taken from Stefans ssrg_general folder
-            # calculate equivalent radius from equivalent mass
-            re = ((3 * mcTable['mTot']) / (4 * mcTable['sRhoIce'] * np.pi)) ** (1/3) *1e3
-            X = 4*np.pi*re/wl # calculate size parameter
-            qbck_h = 4*X**4*K2 # calculate backscattering efficiency
-            cbck_h = qbck_h  * re**2 * np.pi/((2*np.pi)**2) #need to divide by (2*pi)^2 to get same as ssrga
-            '''
-            wlStr = '{:.2e}'.format(wl)
-            prefactor = (wl*1e-3)**4/(np.pi**5*K2)
-            
-            # rayleigh approximation according to Jussi Leinonens diss:             
-            k = 2 * np.pi / (wl*1e-3)
-            sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
-            mcTable['sZeH_{0}'.format(wlStr)] = prefactor * sigma * 1e18 # 1e18 to convert to mm6/m3
+            for elv in elvs:
+                '''
+                # rayleigh approximation taken from Stefans ssrg_general folder
+                # calculate equivalent radius from equivalent mass
+                re = ((3 * mcTable['mTot']) / (4 * mcTable['sRhoIce'] * np.pi)) ** (1/3) *1e3
+                X = 4*np.pi*re/wl # calculate size parameter
+                qbck_h = 4*X**4*K2 # calculate backscattering efficiency
+                cbck_h = qbck_h  * re**2 * np.pi/((2*np.pi)**2) #need to divide by (2*pi)^2 to get same as ssrga
+                '''
+                wlStr = '{:.2e}'.format(wl)
+                prefactor = (wl*1e-3)**4/(np.pi**5*K2)
+                
+                # rayleigh approximation according to Jussi Leinonens diss:             
+                k = 2 * np.pi / (wl*1e-3)
+                sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = prefactor * sigma * 1e18 # 1e18 to convert to mm6/m3
     elif scatSet['mode'] == 'SSRGA-Rayleigh':
         print('using SSRGA for aggregates and Rayleigh approximation for crystals')
         
@@ -445,97 +447,98 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         mcTableCry = mcTable[(mcTable['sNmono']==1)].copy() # only monomers
         lut = xr.open_dataset(scatSet['lutFile']) # SSRGA LUT
         for wl in wls:
-            wlStr = '{:.2e}'.format(wl) # wl here is in mm!!
-            
-            wl_m = wl*1e-3
-            prefactor = wl_m**4/(np.pi**5*K2)            
-            # rayleigh approximation for crystal:             
-            k = 2 * np.pi / (wl_m)
-            if len(mcTableCry['mTot']) > 0:
-              ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableCry['mTot']/mcTableCry['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
-              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']==1] = prefactor * ssCbck * 1e18 # 1e18 to convert to mm6/m3
-            else:
-              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']==1] = np.nan
-            # ssrga for aggregates:
-            
-            freq = constants.c / wl_m
-            #if len(mcTableAgg['mTot']) > 0:
-                
-                #quit()
-            points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
-                             size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
-                             method='nearest') # select nearest particle properties.
-            
-            if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
-              ssCbck = points.Cbck.values # in mm^3 
-              
-              #prefactor = (wl_m)**4/(np.pi**5*K2) 
-              wlStr = '{:.2e}'.format(wl)
-              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
-            else:
-              mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
+            for elv in elvs:
+                wlStr = '{:.2e}'.format(wl) # wl here is in mm!!
+
+                wl_m = wl*1e-3
+                prefactor = wl_m**4/(np.pi**5*K2)            
+                # rayleigh approximation for crystal:             
+                k = 2 * np.pi / (wl_m)
+                if len(mcTableCry['mTot']) > 0:
+                  ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableCry['mTot']/mcTableCry['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
+                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = prefactor * ssCbck * 1e18 # 1e18 to convert to mm6/m3
+                else:
+                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
+                # ssrga for aggregates:
+
+                freq = constants.c / wl_m
+                #if len(mcTableAgg['mTot']) > 0:
+                    
+                    #quit()
+                points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
+                                 size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
+                                 method='nearest') # select nearest particle properties.
+
+                if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
+                  ssCbck = points.Cbck.values # in mm^3 
+                  
+                  #prefactor = (wl_m)**4/(np.pi**5*K2) 
+                  wlStr = '{:.2e}'.format(wl)
+                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
+                else:
+                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = np.nan
     
     
     elif scatSet['mode'] == 'DDA':
         #-- this option uses the DDA scattering tables.
+        #TODO: optimize, it takes quite a long time right now to select everything (why???)
         #calculation of the reflectivity for AR < 1
-        #print('DDA selected, only possible for plate-like particles at the moment. Also, scattering of aggregates gets calulated with SSRGA')
         # different DDA LUT for monomers and Aggregates. Sofar only for dendritic particles. 
         mcTabledendrite = mcTable[mcTable['sPhi']<1].copy() # select only plates
         mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy() # select only aggregates
-        elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
-        elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
-        
+         
         #print('elevation ', elv,'lut elevation ', elvSel)        
         for wl in wls:
-            wlStr = '{:.2e}'.format(wl)
-            f = 299792458e3/wl
-            freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
-            freSel = str(freSel).ljust(6,'0')#
-            #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-            dataset_filename = scatSet['lutPath'] + 'DDA_LUT_'+scatSet['particle_name']+'_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
-            lut = xr.open_dataset(dataset_filename) # read in LUT
-            #print(lut)
-            #print(lut.wavelength)
-            if len(mcTabledendrite)>0: # only possible if we have plate-like particles
-                lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation 
-                points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
-                                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
-                                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
-                points['S22r_S11r'] = points.S22r - points.S11r 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+            for elv in elvs:
+                wlStr = '{:.2e}'.format(wl)
+                f = 299792458e3/wl
+                elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
+                elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
+               
+                if len(mcTabledendrite)>0: # only possible if we have plate-like particles
+                    freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
+                    freSel = str(freSel).ljust(6,'0')#
+                    #print('frequency ', f/1.e9, 'lut frequency ', freSel)
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_'+scatSet['particle_name']+'_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+                    lut = xr.open_dataset(dataset_filename) # read in LUT
+                    lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation 
+                    points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                                        aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
+                                        mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
-                if (points.Z11flag==1).any():
-                	
-                	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
-                	
-                	 
-            else: # if no plates
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-            #- now for aggregates
-            if len(mcTableAgg.mTot)>0: # only if aggregates are here
-                freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
-                freSel = str(freSel).ljust(6,'0')#
-                #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-                dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
-                lut = xr.open_dataset(dataset_filename)
-                lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
-                points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
-            
-                points['S22r_S11r'] = points.S22r - points.S11r 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_h
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_v
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = kdp_M1
-            else:
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1]= np.nan
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
+                    mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_h
+                    mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_v
+                    mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = kdp_M1
+                    if (points.Z11flag==1).any():
+                    	
+                    	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    	
+                    	 
+                else: # if no plates
+                    mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = np.nan
+                    mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = np.nan
+                    mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = np.nan
+                #- now for aggregates
+                if len(mcTableAgg.mTot)>0: # only if aggregates are here
+                    freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
+                    freSel = str(freSel).ljust(6,'0')#
+                    #print('frequency ', f/1.e9, 'lut frequency ', freSel)
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                    lut = xr.open_dataset(dataset_filename)
+                    lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
+                    points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
+
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
+                    mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = reflect_h
+                    mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = reflect_v
+                    mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = kdp_M1
+                else:
+                    mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = np.nan
+                    mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1]= np.nan
+                    mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = np.nan
             
     elif scatSet['mode'] == 'DDA_rational':
         #- this uses rational functions to calculate scattering properties. 
@@ -578,180 +581,53 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         print('elevation ', elv,'lut elevation ', elvSel)
         
         for wl in wls:
-            f = 299792458e3/wl
-            freSel = scatSet['lutFreq'][np.argmin(np.abs(np.array(scatSet['lutFreq'])-f))]
-            print('frequency ', f/1.e9, 'lut frequency ', freSel/1.e9)
-            dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel)) 
-            
-            # this is the wisdom part, only calculate if particle has not been filled yet!
-            lut = xr.open_dataset(dataset_filename).load()#.sel(wavelength=wl,
-                                                   #     elevation=elv,
-                                                   #     canting=1.0,
-                                                   #     method='nearest')
+            for elv in elvs:
+                f = 299792458e3/wl
+                freSel = scatSet['lutFreq'][np.argmin(np.abs(np.array(scatSet['lutFreq'])-f))]
+                print('frequency ', f/1.e9, 'lut frequency ', freSel/1.e9)
+                dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel)) 
 
-            #print(lut)
-            
-            points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
-                         size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
-                         aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-                         density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
-                         method='nearest')
-            
-            
-            
-            #tmpTable = 
-            # for ar < 1!!
-            canting = True
-            meanAngle=0
-            cantingStd=1
-            points1 = points.where(points.aspect < 1,drop=True)
-            size1 = xr.DataArray(mcTable['radii_mm'].values, dims='points').where(points.aspect < 1,drop=True).values
-            ar1 = xr.DataArray(mcTable['sPhi'].values, dims='points').where(points.aspect < 1,drop=True).values
-            rho1 = xr.DataArray(mcTable['sRho_tot_g'].values, dims='points').where(points.aspect < 1,drop=True).values
-            if len(points1.size)>0:
-                radii_M1 = points1.radii_mm.where(np.isnan(points1.Z11),drop=True).values #[mm]
-                if len(radii_M1)>0:
-                    print('updating LUT with ',len(radii_M1),' new particles')
-                    as_ratio_M1 = points1.aspect.where(np.isnan(points1.Z11),drop=True).values
-                    rho_M1 = points1.density.where(np.isnan(points1.Z11),drop=True).values
-                    ar1 = ar1.where(np.isnan(points1.Z11),drop=True).values
-                    rho1 = rho1.where(np.isnan(points1.Z11),drop=True).values
-                    size1 = size1.where(np.isnan(points1.Z11),drop=True).values
-                    singleScat = calcScatPropOneFreq(wl, size1, ar1, 
-                                         rho1, elv, canting=canting, 
-                                         cantingStd=cantingStd, 
-                                         meanAngle=meanAngle, ndgs=ndgs,
-                                         safeTmatrix=scatSet['safeTmatrix'])
-                    reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-            
-            # fill LUT with new values
-                    for i in range(len(radii_M1)):
-                        #print(i, 'of total ',len(radii_M1))
-                        lut.Z11.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z11Mat[i]
-                        lut.Z12.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z12Mat[i]
-                        lut.Z21.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z21Mat[i]
-                        lut.Z22.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z22Mat[i]
-                        lut.Z33.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z33Mat[i]
-                        lut.Z44.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z44Mat[i]
-                        lut.S11i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S11iMat[i]
-                        lut.S22i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S22iMat[i]
-                        lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
-            
-            # for ar >= 1!!
-            canting = True
-            meanAngle=90
-            cantingStd=1
-            points1 = points.where(points.aspect >= 1,drop=True)
-            
-            if len(points1.size)>0:
-                radii_M1 = points1['size'].where(np.isnan(points1.Z11),drop=True).values #[mm]
-                
-                as_ratio_M1 = points1['aspect'].where(np.isnan(points1.Z11),drop=True).values
-                rho_M1 = points1['density'].where(np.isnan(points1.Z11),drop=True).values
-                if len(radii_M1)>0:
-                    print('updating LUT with ',len(radii_M1),' new particles')
-                    singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
-                                         rho_M1, elv, canting=canting, 
-                                         cantingStd=cantingStd, 
-                                         meanAngle=meanAngle, ndgs=ndgs,
-                                         safeTmatrix=scatSet['safeTmatrix'])
-                    reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-            
-                # fill LUT with new values
-                    for i in range(len(radii_M1)):
-                        #print(i, 'of total ',len(radii_M1)-1)
-                        lut.Z11.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z11Mat[i]
-                        lut.Z12.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z12Mat[i]
-                        lut.Z21.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z21Mat[i]
-                        lut.Z22.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z22Mat[i]
-                        lut.Z33.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z33Mat[i]
-                        lut.Z44.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z44Mat[i]
-                        lut.S11i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S11iMat[i]
-                        lut.S22i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S22iMat[i]
-                        lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
-                    lut.close()
-                    lut.to_netcdf(dataset_filename)
-            
-            
-            lut = xr.open_dataset(dataset_filename)
-            #print(lut)
-            
-            # now select new points in lut and calculate reflect,...
-            points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
-                             size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
-                             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-                             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
-                             method='nearest')
-            
-            #- interpolate rather than select!!
-            #lutWaveEl = lut.sel(wavelength=wl, elevation=elv, canting=1.0)
-            
-                
-            #pointsnew = lutWaveEl.interp(size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
-            #			             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-           # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
-            
-            
-            reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
-            
-            wlStr = '{:.2e}'.format(wl)
-            
-            mcTable['sZeH_{0}'.format(wlStr)] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)] = kdp_M1
-    
-    
-    
-    
-    
-    
-    elif len(mcTable): # interpolation fails if no selection is possible
-        elvSel = scatSet['lutElev'][np.argmin(np.abs(np.array(scatSet['lutElev'])-elv))]
-        print('elevation ', elv,'lut elevation ', elvSel)
-        #if scatSet['mode'] == 'table':
-        #    print('fast LUT mode')
+                # this is the wisdom part, only calculate if particle has not been filled yet!
+                lut = xr.open_dataset(dataset_filename).load()#.sel(wavelength=wl,
+                                                       #     elevation=elv,
+                                                       #     canting=1.0,
+                                                       #     method='nearest')
 
-        #elif scatSet['mode'] == 'wisdom':            
-        #    print('less fast cache adaptive mode')
-        
-        for wl in wls:
-            f = 299792458e3/wl
-            freSel = scatSet['lutFreq'][np.argmin(np.abs(np.array(scatSet['lutFreq'])-f))]
-            print('frequency ', f/1.e9, 'lut frequency ', freSel/1.e9)
-            dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel)) 
-            lut = xr.open_dataset(dataset_filename).load()#.sel(wavelength=wl,
-                                                   #     elevation=elv,
-                                                   #     canting=1.0,
-                                                   #     method='nearest')
+                #print(lut)
 
-            #print(lut)
-            if scatSet['mode'] == 'wisdom':
                 points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
                              size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
                              aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
                              density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
                              method='nearest')
-                
-                
+
+
+
                 #tmpTable = 
                 # for ar < 1!!
                 canting = True
                 meanAngle=0
                 cantingStd=1
                 points1 = points.where(points.aspect < 1,drop=True)
+                size1 = xr.DataArray(mcTable['radii_mm'].values, dims='points').where(points.aspect < 1,drop=True).values
+                ar1 = xr.DataArray(mcTable['sPhi'].values, dims='points').where(points.aspect < 1,drop=True).values
+                rho1 = xr.DataArray(mcTable['sRho_tot_g'].values, dims='points').where(points.aspect < 1,drop=True).values
                 if len(points1.size)>0:
-                    radii_M1 = points1['size'].where(np.isnan(points1.Z11),drop=True).values #[mm]
+                    radii_M1 = points1.radii_mm.where(np.isnan(points1.Z11),drop=True).values #[mm]
                     if len(radii_M1)>0:
                         print('updating LUT with ',len(radii_M1),' new particles')
-                        as_ratio_M1 = points1['aspect'].where(np.isnan(points1.Z11),drop=True).values
-                        rho_M1 = points1['density'].where(np.isnan(points1.Z11),drop=True).values
-                        singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
-                                             rho_M1, elv, canting=canting, 
+                        as_ratio_M1 = points1.aspect.where(np.isnan(points1.Z11),drop=True).values
+                        rho_M1 = points1.density.where(np.isnan(points1.Z11),drop=True).values
+                        ar1 = ar1.where(np.isnan(points1.Z11),drop=True).values
+                        rho1 = rho1.where(np.isnan(points1.Z11),drop=True).values
+                        size1 = size1.where(np.isnan(points1.Z11),drop=True).values
+                        singleScat = calcScatPropOneFreq(wl, size1, ar1, 
+                                             rho1, elv, canting=canting, 
                                              cantingStd=cantingStd, 
                                              meanAngle=meanAngle, ndgs=ndgs,
                                              safeTmatrix=scatSet['safeTmatrix'])
                         reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-                
+
                 # fill LUT with new values
                         for i in range(len(radii_M1)):
                             #print(i, 'of total ',len(radii_M1))
@@ -764,13 +640,13 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
                             lut.S11i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S11iMat[i]
                             lut.S22i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S22iMat[i]
                             lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
-                
+
                 # for ar >= 1!!
                 canting = True
                 meanAngle=90
                 cantingStd=1
                 points1 = points.where(points.aspect >= 1,drop=True)
-                
+
                 if len(points1.size)>0:
                     radii_M1 = points1['size'].where(np.isnan(points1.Z11),drop=True).values #[mm]
                     
@@ -784,7 +660,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
                                              meanAngle=meanAngle, ndgs=ndgs,
                                              safeTmatrix=scatSet['safeTmatrix'])
                         reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
-                
+
                     # fill LUT with new values
                         for i in range(len(radii_M1)):
                             #print(i, 'of total ',len(radii_M1)-1)
@@ -799,32 +675,157 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
                             lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
                         lut.close()
                         lut.to_netcdf(dataset_filename)
-            lut = xr.open_dataset(dataset_filename)
-            #print(lut)
-            
-            # now select new points in lut and calculate reflect,...
-            points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
-                             size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
-                             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-                             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
-                             method='nearest')
-            
-            #- interpolate rather than select!!
-            #lutWaveEl = lut.sel(wavelength=wl, elevation=elv, canting=1.0)
-            
-                
-            #pointsnew = lutWaveEl.interp(size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
-            #			             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
-           # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
-            
-            
-            reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
-            
-            wlStr = '{:.2e}'.format(wl)
-            
-            mcTable['sZeH_{0}'.format(wlStr)] = reflect_h
-            mcTable['sZeV_{0}'.format(wlStr)] = reflect_v
-            mcTable['sKDP_{0}'.format(wlStr)] = kdp_M1
+
+
+                lut = xr.open_dataset(dataset_filename)
+                #print(lut)
+
+                # now select new points in lut and calculate reflect,...
+                points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
+                                 size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                                 aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
+                                 density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
+                                 method='nearest')
+
+                #- interpolate rather than select!!
+                #lutWaveEl = lut.sel(wavelength=wl, elevation=elv, canting=1.0)
+
+                    
+                #pointsnew = lutWaveEl.interp(size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                #			             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
+                # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
+
+
+                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+
+                wlStr = '{:.2e}'.format(wl)
+
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = reflect_h
+                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)] = reflect_v
+                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)] = kdp_M1
+    
+    
+    elif len(mcTable): # interpolation fails if no selection is possible
+        elvSel = scatSet['lutElev'][np.argmin(np.abs(np.array(scatSet['lutElev'])-elv))]
+        print('elevation ', elv,'lut elevation ', elvSel)
+        #if scatSet['mode'] == 'table':
+        #    print('fast LUT mode')
+
+        #elif scatSet['mode'] == 'wisdom':            
+        #    print('less fast cache adaptive mode')
+        
+        for wl in wls:
+            for elv in elvs:
+                f = 299792458e3/wl
+                freSel = scatSet['lutFreq'][np.argmin(np.abs(np.array(scatSet['lutFreq'])-f))]
+                print('frequency ', f/1.e9, 'lut frequency ', freSel/1.e9)
+                dataset_filename = scatSet['lutPath'] + 'testLUT_{:3.1f}e9Hz_{:d}.nc'.format(freSel/1e9, int(elvSel)) 
+                lut = xr.open_dataset(dataset_filename).load()#.sel(wavelength=wl,
+                                                       #     elevation=elv,
+                                                       #     canting=1.0,
+                                                       #     method='nearest')
+
+                #print(lut)
+                if scatSet['mode'] == 'wisdom':
+                    points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
+                                 size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                                 aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
+                                 density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
+                                 method='nearest')
+                    
+                    
+                    #tmpTable = 
+                    # for ar < 1!!
+                    canting = True
+                    meanAngle=0
+                    cantingStd=1
+                    points1 = points.where(points.aspect < 1,drop=True)
+                    if len(points1.size)>0:
+                        radii_M1 = points1['size'].where(np.isnan(points1.Z11),drop=True).values #[mm]
+                        if len(radii_M1)>0:
+                            print('updating LUT with ',len(radii_M1),' new particles')
+                            as_ratio_M1 = points1['aspect'].where(np.isnan(points1.Z11),drop=True).values
+                            rho_M1 = points1['density'].where(np.isnan(points1.Z11),drop=True).values
+                            singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
+                                                 rho_M1, elv, canting=canting, 
+                                                 cantingStd=cantingStd, 
+                                                 meanAngle=meanAngle, ndgs=ndgs,
+                                                 safeTmatrix=scatSet['safeTmatrix'])
+                            reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                    
+                    # fill LUT with new values
+                            for i in range(len(radii_M1)):
+                                #print(i, 'of total ',len(radii_M1))
+                                lut.Z11.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z11Mat[i]
+                                lut.Z12.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z12Mat[i]
+                                lut.Z21.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z21Mat[i]
+                                lut.Z22.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z22Mat[i]
+                                lut.Z33.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z33Mat[i]
+                                lut.Z44.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z44Mat[i]
+                                lut.S11i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S11iMat[i]
+                                lut.S22i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S22iMat[i]
+                                lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
+                    
+                    # for ar >= 1!!
+                    canting = True
+                    meanAngle=90
+                    cantingStd=1
+                    points1 = points.where(points.aspect >= 1,drop=True)
+                    
+                    if len(points1.size)>0:
+                        radii_M1 = points1['size'].where(np.isnan(points1.Z11),drop=True).values #[mm]
+                        
+                        as_ratio_M1 = points1['aspect'].where(np.isnan(points1.Z11),drop=True).values
+                        rho_M1 = points1['density'].where(np.isnan(points1.Z11),drop=True).values
+                        if len(radii_M1)>0:
+                            print('updating LUT with ',len(radii_M1),' new particles')
+                            singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
+                                                 rho_M1, elv, canting=canting, 
+                                                 cantingStd=cantingStd, 
+                                                 meanAngle=meanAngle, ndgs=ndgs,
+                                                 safeTmatrix=scatSet['safeTmatrix'])
+                            reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                    
+                        # fill LUT with new values
+                            for i in range(len(radii_M1)):
+                                #print(i, 'of total ',len(radii_M1)-1)
+                                lut.Z11.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z11Mat[i]
+                                lut.Z12.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z12Mat[i]
+                                lut.Z21.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z21Mat[i]
+                                lut.Z22.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z22Mat[i]
+                                lut.Z33.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z33Mat[i]
+                                lut.Z44.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = Z44Mat[i]
+                                lut.S11i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S11iMat[i]
+                                lut.S22i.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = S22iMat[i]
+                                lut.S22r_S11r.loc[radii_M1[i], as_ratio_M1[i], rho_M1[i], float(wl),float(elv),float(canting)] = sMat[i]
+                            lut.close()
+                            lut.to_netcdf(dataset_filename)
+                lut = xr.open_dataset(dataset_filename)
+                #print(lut)
+
+                # now select new points in lut and calculate reflect,...
+                points = lut.sel(wavelength=wl, elevation=elv, canting=1.0,
+                                 size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                                 aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
+                                 density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'),
+                                 method='nearest')
+
+                #- interpolate rather than select!!
+                #lutWaveEl = lut.sel(wavelength=wl, elevation=elv, canting=1.0)
+
+                    
+                #pointsnew = lutWaveEl.interp(size=xr.DataArray(mcTable['radii_mm'].values, dims='points'),
+                #			             aspect=xr.DataArray(mcTable['sPhi'].values, dims='points'),
+                # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
+
+
+                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+
+                wlStr = '{:.2e}'.format(wl)
+
+                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = reflect_h
+                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)] = reflect_v
+                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)] = kdp_M1
             #quit()
             
 

@@ -129,8 +129,8 @@ def calcRho(mcTable):
     return mcTable
 
 
-# TODO this might return an xr.Dataset with wl as dimension instead
-def creatRadarCols(mcTable, wls):
+# TODO this might return an xr.Dataset with wl and elevation as dimension instead
+def creatRadarCols(mcTable, wls,elvs):
     """
     Create the Ze and KDP column
     
@@ -147,15 +147,15 @@ def creatRadarCols(mcTable, wls):
     """
     
     for wl in wls:
-    
-        wlStr = '{:.2e}'.format(wl)
-        mcTable['sZeH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sZeV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sKDP_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-     
-        mcTable['sZeMultH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sZeMultV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sKDPMult_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+        for elv in elvs:
+            wlStr = '{:.2e}'.format(wl)
+            mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
+            mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
+            mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
+         
+            mcTable['sZeMultH_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
+            mcTable['sZeMultV_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
+            mcTable['sKDPMult_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
 
     return mcTable
     

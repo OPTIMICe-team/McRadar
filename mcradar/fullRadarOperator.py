@@ -45,7 +45,7 @@ def fullRadar(dicSettings, mcTable):
                                     scatSet=dicSettings['scatSet'])
 
         
-        tmpSpecXR = getMultFrecSpec(dicSettings['wl'], mcTableTmp, dicSettings['velBins'],
+        tmpSpecXR = getMultFrecSpec(dicSettings['wl'], dicSettings['elv'],mcTableTmp, dicSettings['velBins'],
                                     dicSettings['velCenterBin'], heightEdge1,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
                                     dicSettings['eps_diss'], dicSettings['uwind'], dicSettings['time_int'], dicSettings['theta']/2./180.*np.pi, scatSet=dicSettings['scatSet'] )
         
@@ -55,7 +55,7 @@ def fullRadar(dicSettings, mcTable):
         
         if (dicSettings['scatSet']['mode'] == 'full') or (dicSettings['scatSet']['mode'] == 'table') or (dicSettings['scatSet']['mode'] == 'wisdom') or (dicSettings['scatSet']['mode'] == 'DDA'):
             #calculating the integrated kdp
-            tmpKdpXR = getIntKdp(dicSettings['wl'], mcTableTmp, heightEdge1)
+            tmpKdpXR = getIntKdp(dicSettings['wl'],dicSettings['elv'], mcTableTmp, heightEdge1)
             
             #volume normalization
             tmpKdpXR = tmpKdpXR/vol

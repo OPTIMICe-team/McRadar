@@ -166,7 +166,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated. Also: only 90° elevation')
     elif scatSet['mode'] == 'DDA': 
         
-        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystal and dendritic aggregate. Careful: right now only possible for W-Band, as for the aggregates thats the only one calculated!!')
+        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystal and dendritic aggregate.')
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
