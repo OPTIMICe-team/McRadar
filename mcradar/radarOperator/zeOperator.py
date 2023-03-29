@@ -177,6 +177,7 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
     kdp = 1e-3* (180.0/np.pi)*scatterer.wavelength*sMat
 
     del scatterer # TODO: Evaluate the chance to have one Scatterer object already initiated instead of having it locally
+    
     return reflect_h, reflect_v, refIndex, kdp, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat
 
 
@@ -221,7 +222,7 @@ def radarScat(sp, wl, K2=0.93):
     #Ah = 4.343e-3 * 2 * scatterer.wavelength * sp.S22i.values # attenuation horizontal polarization
     #Av = 4.343e-3 * 2 * scatterer.wavelength * sp.S11i.values # attenuation vertical polarization
 
-    return reflect_hh, reflect_vv, kdp, ldr_h, rho_hv
+    return reflect_hh, reflect_vv, reflect_hv, kdp, rho_hv
 
 def rational3d(x,y,z,a,b):
     if len(a)==17 and len(b)==9:
@@ -348,17 +349,16 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
     if scatSet['mode'] == 'full':
         print('Full mode Tmatrix calculation')
         ##calculation of the reflectivity for AR < 1
+        prefactor = 2*np.pi*wl**4/(np.pi**5*0.93)
+        
         tmpTable = mcTable[mcTable['sPhi']<1].copy()
-
         #particle properties
         canting = True
         meanAngle=0
         cantingStd=1
-        
         radii_M1 = tmpTable['radii_mm'].values #[mm]
         as_ratio_M1 = tmpTable['sPhi'].values
         rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
-
         for wl in wls:
             for elv in elvs:            
                 singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
@@ -367,36 +367,36 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                                                  meanAngle=meanAngle, ndgs=ndgs,
                                                  safeTmatrix=scatSet['safeTmatrix'])
                 reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                reflect_hv = prefactor*(Z11Mat - Z12Mat + Z21Mat - Z22Mat)
                 wlStr = '{:.2e}'.format(wl)
-                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_h
-                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = reflect_v
-                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']<1] = kdp_M1
+                mcTable['sZeH'].loc[elv,wl,tmpTable.index] = reflect_h
+                mcTable['sZeV'].loc[elv,wl,tmpTable.index] = reflect_v
+                mcTable['sZeHV'].loc[elv,wl,tmpTable.index] = reflect_hv
+                mcTable['sKDP'].loc[elv,wl,tmpTable.index] = kdp_M1
 
 
-            ##calculation of the reflectivity for AR >= 1
-            tmpTable = mcTable[mcTable['sPhi']>=1].copy()
-            
-            #particle properties
-            canting=True
-            meanAngle=90
-            cantingStd=1
-            
-            radii_M1 = (tmpTable['radii_mm']).values #[mm]
-            as_ratio_M1 = tmpTable['sPhi'].values
-            rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
-
-            for wl in wls:
-            
+        ##calculation of the reflectivity for AR >= 1
+        tmpTable = mcTable[mcTable['sPhi']>=1].copy()
+        canting=True
+        meanAngle=90
+        cantingStd=1
+        radii_M1 = (tmpTable['radii_mm']).values #[mm]
+        as_ratio_M1 = tmpTable['sPhi'].values
+        rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
+        for wl in wls:
+            for elv in elvs:     
                 singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
                                                  rho_M1, elv, canting=canting, 
                                                  cantingStd=cantingStd, 
                                                  meanAngle=meanAngle, ndgs=ndgs,
                                                  safeTmatrix=scatSet['safeTmatrix'])
                 reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
+                reflect_hv = prefactor*(Z11Mat - Z12Mat + Z21Mat - Z22Mat)
                 wlStr = '{:.2e}'.format(wl)
-                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = reflect_h
-                mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = reflect_v
-                mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sPhi']>=1] = kdp_M1
+                mcTable['sZeH'].loc[elv,wl,tmpTable.index] = reflect_h
+                mcTable['sZeV'].loc[elv,wl,tmpTable.index] = reflect_v
+                mcTable['sZeHV'].loc[elv,wl,tmpTable.index] = reflect_hv
+                mcTable['sKDP'].loc[elv,wl,tmpTable.index] = kdp_M1
 
     elif scatSet['mode'] == 'SSRGA':
         print('using SSRGA scattering table for all particles, elevation is set to 90')
@@ -404,21 +404,18 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         for wl in wls:
             for elv in elvs:
                 freq = (constants.c / wl*1e3)
-                #print(freq)
-                #quit()
-                mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy()
+                mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
+                mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True)
                 points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
                                  size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
                                  method='nearest')
-                #points = lut.sel(wavelength=wl*1e-3, elevation=90.0, # sofar: elevation can only be 90, we need more SSRGA calculations for other elevation
-                #                 size = xr.DataArray(mcTable['dia'].values, dims='points'),
-                #                 method='nearest')
-                ssCbck = points.Cbck.values#*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
                 
+                ssCbck = points.Cbck.values#*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
                 prefactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
                 wlStr = '{:.2e}'.format(wl)
-                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18
-                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
+                #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18
+                #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
+                mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck * 1e18
     elif scatSet['mode'] == 'Rayleigh':
         print('using Rayleigh approximation for all particles, only elevation 90 so far')
         for wl in wls:
@@ -437,45 +434,36 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 # rayleigh approximation according to Jussi Leinonens diss:             
                 k = 2 * np.pi / (wl*1e-3)
                 sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
-                mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = prefactor * sigma * 1e18 # 1e18 to convert to mm6/m3
+                #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = prefactor * sigma * 1e18 # 1e18 to convert to mm6/m3
+                mcTable['sZeH'].loc[elv,wl,mcTable.index] = prefactor * sigma * 1e18
     elif scatSet['mode'] == 'SSRGA-Rayleigh':
         print('using SSRGA for aggregates and Rayleigh approximation for crystals')
         
-        mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy() # only aggregates
-        mcTableCry = mcTable[(mcTable['sNmono']==1)].copy() # only monomers
+        mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
+        mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True)
         lut = xr.open_dataset(scatSet['lutFile']) # SSRGA LUT
         for wl in wls:
             for elv in elvs:
                 wlStr = '{:.2e}'.format(wl) # wl here is in mm!!
-
                 wl_m = wl*1e-3
+                freq = constants.c / wl_m
                 prefactor = wl_m**4/(np.pi**5*K2)            
                 # rayleigh approximation for crystal:             
                 k = 2 * np.pi / (wl_m)
-                if len(mcTableCry['mTot']) > 0:
-                  ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableCry['mTot']/mcTableCry['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
-                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = prefactor * ssCbck * 1e18 # 1e18 to convert to mm6/m3
-                else:
-                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
+                if len(mcTableMono['mTot']) > 0:
+                  ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableMono['mTot']/mcTableMono['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
+                  #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = prefactor * ssCbck * 1e18 # 1e18 to convert to mm6/m3
+                  mcTable['sZeH'].loc[elv,wl,mcTableMono.index] = prefactor * ssCbck * 1e18
+                
                 # ssrga for aggregates:
-
-                freq = constants.c / wl_m
-                #if len(mcTableAgg['mTot']) > 0:
-                    
-                    #quit()
                 points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
                                  size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
                                  method='nearest') # select nearest particle properties.
 
                 if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
                   ssCbck = points.Cbck.values # in mm^3 
-                  
-                  #prefactor = (wl_m)**4/(np.pi**5*K2) 
-                  wlStr = '{:.2e}'.format(wl)
-                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
-                else:
-                  mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = np.nan
-    
+                  #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
+                  mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck * 1e18
     
     elif scatSet['mode'] == 'DDA':
         #-- this option uses the DDA scattering tables.
@@ -500,10 +488,11 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 					                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
                     points['S22r_S11r'] = points.S22r - points.S11r 
-                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
                     mcTable['sZeH'].loc[elv,wl,mcTabledendrite.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTabledendrite.index] = reflect_v
+                    mcTable['sZeHV'].loc[elv,wl,mcTabledendrite.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTabledendrite.index] = kdp_M1
 
                 #- now for aggregates
@@ -519,9 +508,10 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
 
                     points['S22r_S11r'] = points.S22r - points.S11r 
-                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
                     mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTableAgg.index] = reflect_v
+                    mcTable['sZeHV'].loc[elv,wl,mcTableAgg.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTableAgg.index] = kdp_M1
 
     elif scatSet['mode'] == 'DDA_rational':
@@ -551,7 +541,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 #print(points)
                 points['S22r_S11r'] = points.S22r - points.S11r 
                 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+                reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl)
                 
                 mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h 
                 mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
@@ -680,7 +670,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
 
 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+                reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl)
 
                 wlStr = '{:.2e}'.format(wl)
 
@@ -803,7 +793,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 # 			             density=xr.DataArray(mcTable['sRho_tot_g'].values, dims='points'))
 
 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl)
+                reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl)
 
                 wlStr = '{:.2e}'.format(wl)
 

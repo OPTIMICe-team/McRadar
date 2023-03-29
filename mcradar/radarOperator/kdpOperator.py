@@ -21,33 +21,21 @@ def getIntKdp(mcTable, centerHeight):
 
 	Returns
 	-------
-	kdpXR: kdp calculated of a distribution of particles
-	kdbXR: dims=(range)
+	tmpKdp: kdp calculated of a distribution of particles, separated for monomers and aggregates
+	tmpKdp: dims=(range)
 	"""
 
 	tmpKdp = xr.Dataset()
-
-	sKDP = mcTable.sKPD * mcTableTmp['sMult']
-	tmpKdp['KDP'] = sKDP.sum(dim='index').expand_dims({'range':centerHeight})
+	sKDP = mcTable.sKDP * mcTable['sMult']
+	tmpKdp['KDP'] = sKDP.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
 	# now differently for Aggregates and Monomers
-	mcTabledendrite = mcTableTmp.where(mcTableTmp['sPhi']<1,drop=True) # select only plates
-	mcTableAgg = mcTableTmp.where(mcTableTmp['sNmono']>1,drop=True)
+	mcTabledendrite = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
+	mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
 	KDPMono = mcTabledendrite['sKDP'] * mcTabledendrite['sMult']
-	tmpKdp['KDPMono'] = KDPMono.sum(dim='index').expand_dims({'range':centerHeight})
+	tmpKdp['KDPMono'] = KDPMono.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
 	KDPAgg = mcTableAgg['sKDP'] * mcTableAgg['sMult']
-	tmpKdp['KDPAgg'] = KDPAgg.sum(dim='index').expand_dims({'range':centerHeight})
-	
-	#for wl in wls:
-
-	#    wlStr = '{:.2e}'.format(wl)
-	#    mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
-	#    kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
-	#                         dims=('range'),
-	#                         coords={'range':centerHeight[np.newaxis]},
-	#                         name='kdpInt_{0}'.format(wlStr))
-
-	#    tmpKdp = xr.merge([tmpKdp, kdpXR])
+	tmpKdp['KDPAgg'] = KDPAgg.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
     
-    return tmpKdp
+	return tmpKdp
 
 

@@ -62,16 +62,19 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight, c
     else:
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
         mcTable['sZeMultV'] = mcTable['sZeV'] * mcTable['sMult']
+        mcTable['sZeMultHV'] = mcTable['sZeHV'] * mcTable['sMult']
         group = mcTable.groupby_bins("vel", velBins,labels=velCenterBins).sum()#.sel(wavelength=wl,elevation=elv).groupby_bins("vel", velBins,labels=velCenterBins).sum()#.rename({'vel_bins':'doppler_vel'})
             
         specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
         specTable['spec_V'] = group['sZeMultV'].rename({'vel_bins':'vel'})
+        specTable['spec_HV'] = group['sZeMultHV'].rename({'vel_bins':'vel'})
         if convolute == True:
             for wl in wls:
                 for elv in elvs:
                     mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
                     specTable['spec_V'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+                    specTable['spec_HV'].loc[:,elv,wl] = convoluteSpec(specTable['spec_HV'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
 
     specTable = specTable.expand_dims(dim='range').assign_coords(range=[centerHeight])
     

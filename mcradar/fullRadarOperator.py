@@ -50,7 +50,7 @@ def fullRadar(dicSettings, mcTable):
 
         if (dicSettings['scatSet']['mode'] == 'full') or (dicSettings['scatSet']['mode'] == 'table') or (dicSettings['scatSet']['mode'] == 'wisdom') or (dicSettings['scatSet']['mode'] == 'DDA'):
             #calculating the integrated kdp
-            tmpKdpXR =  getIntKdp(mcTableTmp)
+            tmpKdpXR =  getIntKdp(mcTableTmp,(heightEdge1+heightEdge0)/2)
             specXR = xr.merge([specXR, tmpKdpXR/vol])
         #print(specXR)
         
