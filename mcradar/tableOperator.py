@@ -26,21 +26,16 @@ def getMcSnowTable(mcSnowPath):
     
     #open nc file with xarray
     mcTableXR = xr.open_dataset(mcSnowPath)
-    #print(mcTableXR)
-    mcTableXR = mcTableXR.astype('float64')
-    #change to pandas dataframe, since McRadar has been working with that
-    selMcTable = mcTableXR.to_dataframe() 
-    #print('to_dataframe()')
-    
-    #selMcTable = mcTable.copy()
-    selMcTable['vel'] = -1. * selMcTable['vel']
-    selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
-    selMcTable['dia_mum'] = selMcTable['dia'] * 1e6 
-    selMcTable['mTot_g'] = selMcTable['mTot'] * 1e3
-    selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
-    if 'sPhi' not in selMcTable:
-      selMcTable['sPhi'] = 1.0 # simply add sPhi = 1
-    selMcTable['sRho_tot_gmm'] = selMcTable['sRho_tot']*1e-6 # in g/mm³
+    mcTable = mcTableXR.astype('float64')
+
+    mcTable['vel'] = -1. * mcTable['vel']
+    mcTable['radii_mm'] = mcTable['dia'] * 1e3 / 2.
+    mcTable['dia_mum'] = mcTable['dia'] * 1e6 
+    mcTable['mTot_g'] = mcTable['mTot'] * 1e3
+    mcTable['dia_cm'] = mcTable['dia'] * 1e2
+    if 'sPhi' not in mcTable:
+      mcTable['sPhi'] = 1.0 # simply add sPhi = 1
+    mcTable['sRho_tot_gmm'] = mcTable['sRho_tot']*1e-6 # in g/mm³
     #if 'sRho_tot' not in selMcTable:
     #  try:
     #    selMcTable = calcRhophys(selMcTable)
@@ -50,7 +45,7 @@ def getMcSnowTable(mcSnowPath):
     #selMcTable = calcRho(selMcTable)
     #selMcTable['sRho'] = 6.0e-3*mcTable.mTot/(np.pi*mcTable.dia**3*mcTable.sPhi**(-2+3*(mcTable.sPhi<1).astype(int)))
             
-    return selMcTable
+    return mcTable
 
 def kernel_estimate(R_SP_list,Rgrid,sigma0=0.62,weight=None,space='loge'): #taken and adapted from mo_output.f90
     """
@@ -129,35 +124,32 @@ def calcRho(mcTable):
     return mcTable
 
 
-# TODO this might return an xr.Dataset with wl and elevation as dimension instead
-def creatRadarCols(mcTable, wls,elvs):
-    """
-    Create the Ze and KDP column
-    
-    Parameters
-    ----------
-    mcTable: output from getMcSnowTable()
-    wls: wavelenght (iterable) [mm]
-    
-    Returns
-    -------
-    mcTable with a empty columns 'sZe*_*' 'sKDP_*' for 
-    storing Ze_H and Ze_V and sKDP of one particle of a 
-    given wavelength
-    """
-    
-    for wl in wls:
-        for elv in elvs:
-            wlStr = '{:.2e}'.format(wl)
-            mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
-            mcTable['sZeV_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
-            mcTable['sKDP_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
-         
-            mcTable['sZeMultH_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
-            mcTable['sZeMultV_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
-            mcTable['sKDPMult_{0}_elv{1}'.format(wlStr,elv)] = np.ones_like(mcTable['time'])*np.nan
 
-    return mcTable
+def creatRadarCols(mcTable, dicSettings):
+	"""
+	Create the Ze and KDP column
+
+	Parameters
+	----------
+	mcTable: output from getMcSnowTable()
+	wls: wavelenght (iterable) [mm]
+
+	Returns
+	-------
+	mcTable with a empty columns 'sZe*_*' 'sKDP_*' for 
+	storing Ze_H and Ze_V and sKDP of one particle of a 
+	given wavelength
+	"""
+	print(mcTable)
+	mcTable['sZeH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan#.assign_coords(elevation=dicSettings['elv'])
+	mcTable['sZeV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sKDP'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sZeMultH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sZeMultV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sKDPMult'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	
+	return mcTable
+
     
 def calcRhophys(mcTable):
     """
