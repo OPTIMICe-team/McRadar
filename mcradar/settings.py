@@ -52,7 +52,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                           This mode uses Rayleigh for all particles, regardless of monomer number. 
                           Careful: only use Rayleigh with low frequency such as C,S or X-Band. You need to specify LUT path.
                         - SSRGA-Rayleigh --> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
-                        - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. With DDA you need to specify a particle, choose between dendrite and column. You also need to specify the path to the LUT.  
+                        - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. Columnar or plate-like scattering table will be chosen depending on the aspect ratio of the particles. You need to specify the path to the LUT.  
                           
       scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA' or 'SSRGA-Rayleigh' or 'DDA' the path to the lut.nc files is required
       scatSet['particle_name']: in case scatSet['mode'] is either 'SSRGA' or 'SSRGA-Rayleigh' the name of the particle to use SSRGA parameters is required. For a list of names see snowScatt. 
@@ -170,9 +170,9 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_'+scatSet['particle_name']+'_freq*.nc') 
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrite_freq*.nc') 
                 
-                listFreq = [l.split('DDA_LUT_'+scatSet['particle_name']+'_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
+                listFreq = [l.split('DDA_LUT_dendrite_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
                 listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles]
                 listElev = list(dict.fromkeys(listElev))

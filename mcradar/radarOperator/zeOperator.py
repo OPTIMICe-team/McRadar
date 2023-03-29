@@ -11,10 +11,9 @@ from pytmatrix import refractive, tmatrix_aux
 from scipy import constants
 from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
-import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
-
+import time
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
@@ -470,30 +469,74 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         #calculation of the reflectivity for AR < 1
         # different DDA LUT for monomers and Aggregates. Sofar only for dendritic particles. 
 
-        mcTabledendrite = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
+        mcTablePlate = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
+        mcTableColumn = mcTable.where(mcTable['sPhi']>1,drop=True) # select only needle #TODO: shall I make this automatic, so for all ar> 1 select needle and for all ar<1 select dendrite?
         mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True) # select only aggregates
         for wl in wls:
             wlStr = '{:.2e}'.format(wl)
             f = 299792458e3/wl
             for elv in elvs:
 
-                if len(mcTabledendrite.sPhi)>0: # only possible if we have plate-like particles
+                if len(mcTablePlate.sPhi)>0: # only possible if we have plate-like particles
+                    # select correct LUT:
                     elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
                     freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
                     freSel = str(freSel).ljust(6,'0')#
-                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrites_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+                    # open LUT
+                    t0 = time.time()
                     lut = xr.open_dataset(dataset_filename)
-                    lutsel = lut.sel(wavelength=wl*1e-3, elevation=elv,method='nearest') # select nearest wl and elevation TODO: make wavelength in mm
-                    points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
-					                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
+                    t1 = time.time()
+                    total = t1-t0
+                    print('open LUT time ',total)
+                    t0 = time.time()
+                    lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation
+                    t1 = time.time()
+                    total = t1-t0
+                    print('sel wl, elv ',total)
+                    t0 = time.time()
+                    # interpolate to the exact McSnow properties
+                    points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
+					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
+                    t1 = time.time()
+                    total = t1-t0
+                    print('interpolate points ',total)
+                    t0 = time.time()
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    t1 = time.time()
+                    total = t1-t0
+                    print('calculate S22rS11r ',total)
+                    t0 = time.time()
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    t1 = time.time()
+                    total = t1-t0
+                    print('get radarScat ',total)
+                    mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
+                    mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
+                    mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
+                    mcTable['sKDP'].loc[elv,wl,mcTablePlate.index] = kdp_M1
+                    
+                if len(mcTableColumn.sPhi)>0: # only possible if we have column-like particles
+                    # select correct LUT:
+                    elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
+                    freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
+                    freSel = str(freSel).ljust(6,'0')#
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_column_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+                    # open LUT
+                    lut = xr.open_dataset(dataset_filename)
+                    lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation 
+                    # interpolate to the exact McSnow properties
+                    points = lutsel.interp(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+					                    aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
+					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'))
                     points['S22r_S11r'] = points.S22r - points.S11r 
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
-                    mcTable['sZeH'].loc[elv,wl,mcTabledendrite.index] = reflect_h
-                    mcTable['sZeV'].loc[elv,wl,mcTabledendrite.index] = reflect_v
-                    mcTable['sZeHV'].loc[elv,wl,mcTabledendrite.index] = reflect_hv
-                    mcTable['sKDP'].loc[elv,wl,mcTabledendrite.index] = kdp_M1
+                    mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
+                    mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
+                    mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
+                    mcTable['sKDP'].loc[elv,wl,mcTableColumn.index] = kdp_M1
 
                 #- now for aggregates
                 if len(mcTableAgg.mTot)>0: # only if aggregates are here
