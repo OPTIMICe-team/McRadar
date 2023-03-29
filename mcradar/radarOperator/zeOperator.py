@@ -525,8 +525,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 
                 #- now for aggregates
                 if len(mcTableAgg.mTot)>0: # only if aggregates are here
-                    print(len(mcTableAgg.mTot))
-                    print(len(mcTable.mTot))
+                    
                     elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
                     freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
                     freSel = str(freSel).ljust(6,'0')#
@@ -538,14 +537,9 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 
                     points['S22r_S11r'] = points.S22r - points.S11r 
                     reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
-                    print(points)
                     #plt.plot(points.Dmax,reflect_h,marker='.',ls='None')
                     #plt.show()
                     mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h
-                    print(mcTable.sZeH.sel(wavelength=wl,elevation=elv).count())
-                    print(mcTable.vel.count())
-                    
-                    
                     mcTable['sZeV'].loc[elv,wl,mcTableAgg.index] = reflect_v
                     mcTable['sKDP'].loc[elv,wl,mcTableAgg.index] = kdp_M1
 

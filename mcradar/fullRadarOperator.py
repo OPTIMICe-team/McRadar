@@ -33,7 +33,7 @@ def fullRadar(dicSettings, mcTable):
         print('Range: from {0} to {1}'.format(heightEdge0, heightEdge1))
         mcTableTmp = mcTable.where((mcTable['sHeight']>heightEdge0) &
                          (mcTable['sHeight']<=heightEdge1),drop=True)
-        print(mcTableTmp)
+        #print(mcTableTmp)
         mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
                                 mcTableTmp, ndgs=dicSettings['ndgsVal'],
                                 scatSet=dicSettings['scatSet'])
@@ -44,8 +44,7 @@ def fullRadar(dicSettings, mcTable):
 
         #volume normalization
         tmpSpecXR = tmpSpecXR/vol
-        (10*np.log10(tmpSpecXR.sel(elevation=30,wavelength=tmpSpecXR.wavelength[0]))).spec_H.plot(x='vel')
-        plt.show()
+        
         specXR = xr.merge([specXR, tmpSpecXR])
 
         if (dicSettings['scatSet']['mode'] == 'full') or (dicSettings['scatSet']['mode'] == 'table') or (dicSettings['scatSet']['mode'] == 'wisdom') or (dicSettings['scatSet']['mode'] == 'DDA'):
@@ -64,7 +63,7 @@ def fullRadar(dicSettings, mcTable):
             #tmpKdpXR = tmpKdpXR/vol
             
             specXR = xr.merge([specXR, tmpKdpXR/vol, KDPAgg.rename('KDPAgg')/vol, KDPMono.rename('KDPMono')/vol])
-        print(specXR)
+        #print(specXR)
         
     return specXR
 

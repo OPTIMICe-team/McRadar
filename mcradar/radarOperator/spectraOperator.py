@@ -58,32 +58,39 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight, c
     
     else:
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
-        
         mcTable['sZeMultV'] = mcTable['sZeV'] * mcTable['sMult']
-        #print(mcTable)
-        #quit()
-       
-        
+        group = mcTable.groupby_bins("vel", velBins,labels=velCenterBins).sum()#.sel(wavelength=wl,elevation=elv).groupby_bins("vel", velBins,labels=velCenterBins).sum()#.rename({'vel_bins':'doppler_vel'})
+            
+        specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
+        specTable['spec_V'] = group['sZeMultV'].rename({'vel_bins':'vel'})
         if convolute == True:
             for wl in wls:
                 for elv in elvs:
                     mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
-                    group = mcTable.sel(wavelength=wl,elevation=elv).groupby_bins("vel", velBins,labels=velCenterBins).sum()#.rename({'vel_bins':'doppler_vel'})
-            
-                    specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
-                    print(specTable.spec_H)
-            
-                    specTable['spec_V'] = group['sZeMultV'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
-                    spec_H = convoluteSpec(specTable['spec_H'].fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
-                    fig,ax = plt.subplots(ncols=2,figsize=(10,5))
-                    ax[0].plot(mcTable.vel,mcTable.sZeMultH.sel(wavelength=mcTable.wavelength[0],elevation=30),marker='.',ls='None')
-                    ax[1].plot(specTable.vel,spec_H,marker='.',ls='None')
-                    plt.show()
-                    quit()
+                    #.assign_coords({'vel':velCenterBins})
+                    #print(specTable)
+                    #quit()
+                    specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+                    specTable['spec_V'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+                    #spec_H = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
+                    #fig,ax = plt.subplots(ncols=3,figsize=(15,5))
+                    #ax[0].plot(mcTable.vel,10*np.log10(mcTable.sZeMultH.sel(wavelength=mcTable.wavelength[0],elevation=30)),marker='.',ls='None')
+                    #ax[1].plot(mcTable.vel,10*np.log10(mcTable.sZeH.sel(wavelength=mcTable.wavelength[0],elevation=30)),marker='.',ls='None')
+                    #ax[2].plot(specTable.vel,10*np.log10(spec_H),marker='.',ls='None')
+                    #ax[0].set_ylabel('sZe Mult [dB]')
+                    #ax[0].set_xlabel('vel')
+                    #ax[1].set_ylabel('sZe single [dB]')
+                    #ax[1].set_xlabel('vel')
+                    #ax[2].set_ylabel('sZe [dB]')
+                    #ax[2].set_xlabel('vel')
+                    #plt.tight_layout()
+                    #plt.savefig('new_McRadar_lowestheight_noloop.png')
+                    #plt.show()
+                    #quit()
                     #specTable['spec_V'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V'].sel(wavelength=wl,elevation=elv),wl,velCenterBins,eps_diss,noise_pow,nave,theta,uwind,time_int,centerHeight)
-                    mcr.lin2db(specH).plot()
-                    plt.show()
-                    quit()
+                    #mcr.lin2db(specH).plot()
+                    #plt.show()
+                    #quit()
     specTable = specTable.expand_dims(dim='range').assign_coords(range=[centerHeight])
     
     return specTable
@@ -128,7 +135,7 @@ def convoluteSpec(spec,wl,vel,eps,noise_pow,nave,theta,u_wind,time_avg,height):
     for iave in range(nave):
         S_bin_noise = S_bin_noise + (-np.log(random_numbers[iave * (len(vel)) : ((iave+1) * len(vel))]) * (spec_turb + np.ones(len(vel))*Ni )) 
     spectrum = S_bin_noise / nave
-    print(spectrum)
+    
     return spectrum#pd.DataFrame(data=spectrum,index=vel)
     
     
