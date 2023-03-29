@@ -27,20 +27,20 @@ def getMcSnowTable(mcSnowPath):
     #open nc file with xarray
     mcTableXR = xr.open_dataset(mcSnowPath)
     #print(mcTableXR)
-    mcTableXR = mcTableXR.astype('float64')
+    mcTable = mcTableXR.astype('float64')
     #change to pandas dataframe, since McRadar has been working with that
-    selMcTable = mcTableXR.to_dataframe() 
+    #selMcTable = mcTableXR.to_dataframe() 
     #print('to_dataframe()')
     
     #selMcTable = mcTable.copy()
-    selMcTable['vel'] = -1. * selMcTable['vel']
-    selMcTable['radii_mm'] = selMcTable['dia'] * 1e3 / 2.
-    selMcTable['dia_mum'] = selMcTable['dia'] * 1e6 
-    selMcTable['mTot_g'] = selMcTable['mTot'] * 1e3
-    selMcTable['dia_cm'] = selMcTable['dia'] * 1e2
-    if 'sPhi' not in selMcTable:
-      selMcTable['sPhi'] = 1.0 # simply add sPhi = 1
-    selMcTable['sRho_tot_g'] = selMcTable['sRho_tot']*1e-3 # in g/cm³
+    mcTable['vel'] = -1. * mcTable['vel']
+    mcTable['radii_mm'] = mcTable['dia'] * 1e3 / 2.
+    mcTable['dia_mum'] = mcTable['dia'] * 1e6 
+    mcTable['mTot_g'] = mcTable['mTot'] * 1e3
+    mcTable['dia_cm'] = mcTable['dia'] * 1e2
+    if 'sPhi' not in mcTable:
+      mcTable['sPhi'] = 1.0 # simply add sPhi = 1
+    mcTable['sRho_tot_g'] = mcTable['sRho_tot']*1e-3 # in g/cm³
     #if 'sRho_tot' not in selMcTable:
     #  try:
     #    selMcTable = calcRhophys(selMcTable)
@@ -50,7 +50,7 @@ def getMcSnowTable(mcSnowPath):
     #selMcTable = calcRho(selMcTable)
     #selMcTable['sRho'] = 6.0e-3*mcTable.mTot/(np.pi*mcTable.dia**3*mcTable.sPhi**(-2+3*(mcTable.sPhi<1).astype(int)))
             
-    return selMcTable
+    return mcTable
 
 def kernel_estimate(R_SP_list,Rgrid,sigma0=0.62,weight=None,space='loge'): #taken and adapted from mo_output.f90
     """
@@ -130,34 +130,30 @@ def calcRho(mcTable):
 
 
 # TODO this might return an xr.Dataset with wl as dimension instead
-def creatRadarCols(mcTable, wls):
-    """
-    Create the Ze and KDP column
-    
-    Parameters
-    ----------
-    mcTable: output from getMcSnowTable()
-    wls: wavelenght (iterable) [mm]
-    
-    Returns
-    -------
-    mcTable with a empty columns 'sZe*_*' 'sKDP_*' for 
-    storing Ze_H and Ze_V and sKDP of one particle of a 
-    given wavelength
-    """
-    
-    for wl in wls:
-    
-        wlStr = '{:.2e}'.format(wl)
-        mcTable['sZeH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sZeV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sKDP_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-     
-        mcTable['sZeMultH_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sZeMultV_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
-        mcTable['sKDPMult_{0}'.format(wlStr)] = np.ones_like(mcTable['time'])*np.nan
+def creatRadarCols(mcTable, dicSettings):
+	"""
+	Create the Ze and KDP column
 
-    return mcTable
+	Parameters
+	----------
+	mcTable: output from getMcSnowTable()
+	wls: wavelenght (iterable) [mm]
+
+	Returns
+	-------
+	mcTable with a empty columns 'sZe*_*' 'sKDP_*' for 
+	storing Ze_H and Ze_V and sKDP of one particle of a 
+	given wavelength
+	"""
+	print(mcTable)
+	mcTable['sZeH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan#.assign_coords(elevation=dicSettings['elv'])
+	mcTable['sZeV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sKDP'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sZeMultH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sZeMultV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sKDPMult'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	
+	return mcTable
     
 def calcRhophys(mcTable):
     """

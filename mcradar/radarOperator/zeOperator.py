@@ -319,7 +319,7 @@ def _rational(M, *args):
     var = rational3d(x,y,z,a,b)
     return var
     
-def calcParticleZe(wls, elv, mcTable, ndgs=30,
+def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                    scatSet={'mode':'full', 'safeTmatrix':False}, K2=0.93):#zeOperator
     """
     Calculates the horizontal and vertical reflectivity of 
@@ -342,7 +342,7 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
     """
     
     #calling the function to create output columns
-    mcTable = creatRadarCols(mcTable, wls)
+    #mcTable = creatRadarCols(mcTable, wls)
     #print('mcTable has ', len(mcTable))
 
     if scatSet['mode'] == 'full':
@@ -499,57 +499,56 @@ def calcParticleZe(wls, elv, mcTable, ndgs=30,
         #calculation of the reflectivity for AR < 1
         #print('DDA selected, only possible for plate-like particles at the moment. Also, scattering of aggregates gets calulated with SSRGA')
         # different DDA LUT for monomers and Aggregates. Sofar only for dendritic particles. 
-        mcTabledendrite = mcTable[mcTable['sPhi']<1].copy() # select only plates
-        mcTableAgg = mcTable[(mcTable['sNmono']>1)].copy() # select only aggregates
-        elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
-        elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
-        
-        #print('elevation ', elv,'lut elevation ', elvSel)        
+        mcTabledendrite = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
+        mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True) # select only aggregates
         for wl in wls:
             wlStr = '{:.2e}'.format(wl)
             f = 299792458e3/wl
-            freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
-            freSel = str(freSel).ljust(6,'0')#
-            #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-            dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrites_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
-            lut = xr.open_dataset(dataset_filename) # read in LUT
-            #print(lut)
-            #print(lut.wavelength)
-            if len(mcTabledendrite)>0: # only possible if we have plate-like particles
-                lutsel = lut.sel(wavelength=wl*1e-3, elevation=elv,method='nearest') # select nearest wl and elevation TODO: make wavelength in mm
-                points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
-                                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
-                                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
-                points['S22r_S11r'] = points.S22r - points.S11r 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+            for elv in elvs:
 
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_h
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = reflect_v
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = kdp_M1
-            else: # if no plates
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sPhi']<1] = np.nan
-            #- now for aggregates
-            if len(mcTableAgg.mTot)>0: # only if aggregates are here
-                freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
-                freSel = str(freSel).ljust(6,'0')#
-                #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-                dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
-                lut = xr.open_dataset(dataset_filename)
-                lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
-                points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
-            
-                points['S22r_S11r'] = points.S22r - points.S11r 
-                reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_h
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = reflect_v
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = kdp_M1
-            else:
-                mcTable['sZeH_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
-                mcTable['sZeV_{0}'.format(wlStr)].values[mcTable['sNmono']>1]= np.nan
-                mcTable['sKDP_{0}'.format(wlStr)].values[mcTable['sNmono']>1] = np.nan
-            
+                if len(mcTabledendrite.sPhi)>0: # only possible if we have plate-like particles
+                    elvSelMono = scatSet['lutElevMono'][np.argmin(np.abs(np.array(scatSet['lutElevMono'])-elv))] # get correct elevation of LUT
+                    freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
+                    freSel = str(freSel).ljust(6,'0')#
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrites_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
+                    lut = xr.open_dataset(dataset_filename)
+                    lutsel = lut.sel(wavelength=wl*1e-3, elevation=elv,method='nearest') # select nearest wl and elevation TODO: make wavelength in mm
+                    points = lutsel.interp(Dmax=xr.DataArray(mcTabledendrite['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+					                    aspect=xr.DataArray(mcTabledendrite['sPhi'].values, dims='points'),
+					                    mass=xr.DataArray(mcTabledendrite['mTot'].values, dims='points'))
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+
+                    mcTable['sZeH'].loc[elv,wl,mcTabledendrite.index] = reflect_h
+                    mcTable['sZeV'].loc[elv,wl,mcTabledendrite.index] = reflect_v
+                    mcTable['sKDP'].loc[elv,wl,mcTabledendrite.index] = kdp_M1
+
+                #- now for aggregates
+                if len(mcTableAgg.mTot)>0: # only if aggregates are here
+                    print(len(mcTableAgg.mTot))
+                    print(len(mcTable.mTot))
+                    elvSelAgg = scatSet['lutElevAgg'][np.argmin(np.abs(np.array(scatSet['lutElevAgg'])-elv))]
+                    freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
+                    freSel = str(freSel).ljust(6,'0')#
+                    #print('frequency ', f/1.e9, 'lut frequency ', freSel)
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                    lut = xr.open_dataset(dataset_filename)
+                    lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
+                    points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
+
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    reflect_h,  reflect_v, kdp_M1, ldr, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
+                    print(points)
+                    #plt.plot(points.Dmax,reflect_h,marker='.',ls='None')
+                    #plt.show()
+                    mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h
+                    print(mcTable.sZeH.sel(wavelength=wl,elevation=elv).count())
+                    print(mcTable.vel.count())
+                    
+                    
+                    mcTable['sZeV'].loc[elv,wl,mcTableAgg.index] = reflect_v
+                    mcTable['sKDP'].loc[elv,wl,mcTableAgg.index] = kdp_M1
+
     elif scatSet['mode'] == 'DDA_rational':
         #- this uses rational functions to calculate scattering properties. 
         #- requires: fitting parameters

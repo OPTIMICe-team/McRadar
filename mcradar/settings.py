@@ -166,17 +166,19 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated. Also: only 90° elevation')
     elif scatSet['mode'] == 'DDA': 
         
-        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystal and dendritic aggregate. Careful: right now only possible for W-Band, as for the aggregates thats the only one calculated!!')
+        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystal and dendritic aggregate.')
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrites_freq*.nc') 
-                listFreq = [l.split('DDA_LUT_dendrites_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_'+scatSet['particle_name']+'_freq*.nc') 
+                
+                listFreq = [l.split('DDA_LUT_'+scatSet['particle_name']+'_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
                 listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles]
                 listElev = list(dict.fromkeys(listElev))
                 dicSettings['scatSet']['lutFreqMono'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElevMono'] = [int(e) for e in listElev]
+                dicSettings['scatSet']['LUTFilesMono'] = lutFiles
                 #- now same for aggregates
                 lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrite_aggregates_freq*.nc') 
                 #listFreq = [l.split('LUT_dendrite_aggregates')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
@@ -186,6 +188,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                 listElev = list(dict.fromkeys(listElev))
                 dicSettings['scatSet']['lutFreqAgg'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElevAgg'] = [int(e) for e in listElev]
+                dicSettings['scatSet']['LUTFilesAgg'] = lutFiles
+                
                 
             else:
                 msg = ('\n').join(['with this scattering mode ', scatSet['mode'],

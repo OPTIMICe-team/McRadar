@@ -27,16 +27,16 @@ def getIntKdp(wls, mcTable, centerHeight):
     
     tmpKdp = xr.Dataset()
         
-    for wl in wls:
+    #for wl in wls:
         
-        wlStr = '{:.2e}'.format(wl)
-        mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
-        kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
-                             dims=('range'),
-                             coords={'range':centerHeight[np.newaxis]},
-                             name='kdpInt_{0}'.format(wlStr))
+    #    wlStr = '{:.2e}'.format(wl)
+    #    mcTable['sKDPMult_{0}'.format(wlStr)] = mcTable['sKDP_{0}'.format(wlStr)] * mcTable['sMult']
+    #    kdpXR = xr.DataArray(mcTable['sKDPMult_{0}'.format(wlStr)].sum()[np.newaxis],
+    #                         dims=('range'),
+    #                         coords={'range':centerHeight[np.newaxis]},
+    #                         name='kdpInt_{0}'.format(wlStr))
         
-        tmpKdp = xr.merge([tmpKdp, kdpXR])
+    #    tmpKdp = xr.merge([tmpKdp, kdpXR])
     
     return tmpKdp
 
