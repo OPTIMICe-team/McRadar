@@ -492,7 +492,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 					#                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
 					#                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
                     #points['S22r_S11r'] = points.S22r - points.S11r 
-                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    #reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
 					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
