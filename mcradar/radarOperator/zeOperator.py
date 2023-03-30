@@ -496,22 +496,41 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     print('sel wl, elv ',total)
                     t0 = time.time()
                     # interpolate to the exact McSnow properties
-                    points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                    points = lutsel.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
 					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
+					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
                     t1 = time.time()
                     total = t1-t0
-                    print('interpolate points ',total)
+                    print('select points ',total)
                     t0 = time.time()
                     points['S22r_S11r'] = points.S22r - points.S11r 
                     t1 = time.time()
                     total = t1-t0
                     print('calculate S22rS11r ',total)
                     t0 = time.time()
+                    print(points.Z11)
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     t1 = time.time()
                     total = t1-t0
                     print('get radarScat ',total)
+                    points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
+					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
+                    t1 = time.time()
+                    total = t1-t0
+                    print('interp points ',total)
+                    t0 = time.time()
+                    points['S22r_S11r'] = points.S22r - points.S11r 
+                    t1 = time.time()
+                    total = t1-t0
+                    print('calculate S22rS11r ',total)
+                    t0 = time.time()
+                    print(points.Z11)
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    t1 = time.time()
+                    total = t1-t0
+                    print('get radarScat ',total)
+                    quit()
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
@@ -548,8 +567,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
                     lut = xr.open_dataset(dataset_filename)
                     lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
-                    points = lut.interp(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points')) # interpolate to exact McSnow properties
-
+                    points = lut.interp(mass = xr.DataArray(np.log10(mcTableAgg['mTot'].values), dims='points')) # interpolate to exact McSnow properties
+                    points = 10**points
                     points['S22r_S11r'] = points.S22r - points.S11r 
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
                     mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h
