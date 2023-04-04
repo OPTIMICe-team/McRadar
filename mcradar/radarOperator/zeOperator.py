@@ -468,9 +468,9 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         #-- this option uses the DDA scattering tables.
         #calculation of the reflectivity for AR < 1
         # different DDA LUT for monomers and Aggregates. Sofar only for dendritic particles. 
-
-        mcTablePlate = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
-        mcTableColumn = mcTable.where(mcTable['sPhi']>1,drop=True) # select only needle #TODO: shall I make this automatic, so for all ar> 1 select needle and for all ar<1 select dendrite?
+        mcTableCry = mcTable.where(mcTable['sNmono']==1,drop=True) # select only cry
+        mcTablePlate = mcTableCry.where(mcTableCry['sPhi']<1,drop=True) # select only plates
+        mcTableColumn = mcTableCry.where(mcTableCry['sPhi']>1,drop=True) # select only needle #TODO: shall I make this automatic, so for all ar> 1 select needle and for all ar<1 select dendrite?
         mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True) # select only aggregates
         for wl in wls:
             wlStr = '{:.2e}'.format(wl)
@@ -488,15 +488,24 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     lut = xr.open_dataset(dataset_filename)
                     lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation
                     # interpolate to the exact McSnow properties
-                    #points = lutsel.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
-					#                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
-					#                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
-                    #points['S22r_S11r'] = points.S22r - points.S11r 
-                    #reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                    points = lutsel.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
 					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
+					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
+                   
                     points['S22r_S11r'] = points.S22r - points.S11r 
+                    #reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    #print(lutsel.Dmax)
+                    #print(mcTablePlate.sPhi)
+                    #print(mcTablePlate.sNmono)
+                    #points = lutsel.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+					#                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
+					#                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'))
+                    #points['S22r_S11r'] = points.S22r - points.S11r 
+                    #print(points.Z11flag) #TODO add flag warning again!
+                    #quit()
+                    if (points.Z11flag==1).any():
+                    	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
@@ -513,10 +522,13 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     lut = xr.open_dataset(dataset_filename)
                     lutsel = lut.sel(wavelength=wl, elevation=elv,method='nearest') # select nearest wl and elevation 
                     # interpolate to the exact McSnow properties
-                    points = lutsel.interp(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                    points = lutsel.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # interpolate to the exact McSnow properties
 					                    aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'))
+					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
                     points['S22r_S11r'] = points.S22r - points.S11r 
+                    if (points.Z11flag==1).any():
+                    	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
                     mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
@@ -536,6 +548,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
                     points = lut.interp(mass = xr.DataArray(np.log10(mcTableAgg['mTot'].values), dims='points')) # interpolate to exact McSnow properties
                     points = 10**points
+                    
                     points['S22r_S11r'] = points.S22r - points.S11r 
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
                     mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h

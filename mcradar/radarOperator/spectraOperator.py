@@ -64,7 +64,7 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight, c
         mcTable['sZeMultV'] = mcTable['sZeV'] * mcTable['sMult']
         mcTable['sZeMultHV'] = mcTable['sZeHV'] * mcTable['sMult']
         group = mcTable.groupby_bins("vel", velBins,labels=velCenterBins).sum()#.sel(wavelength=wl,elevation=elv).groupby_bins("vel", velBins,labels=velCenterBins).sum()#.rename({'vel_bins':'doppler_vel'})
-            
+        
         specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
         specTable['spec_V'] = group['sZeMultV'].rename({'vel_bins':'vel'})
         specTable['spec_HV'] = group['sZeMultHV'].rename({'vel_bins':'vel'})
