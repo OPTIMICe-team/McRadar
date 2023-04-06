@@ -5,7 +5,7 @@ import os
 from glob import glob
 import numpy as np
 from scipy import constants
-
+import time
 def loadSettings(dataPath=None, elv=90, nfft=512,
                  convolute=True,nave=19,noise_pow=10**(-40/10),
                  eps_diss=1e-6, theta=0.6 , uwind=10.0 , time_int=2.0 ,
@@ -90,7 +90,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                        'nave':nave,
                        'noise_pow':noise_pow,
                        'eps_diss':eps_diss,
-                       'theta':theta,
+                       'theta':theta, 
                        'time_int':time_int,
                        'uwind':uwind,
                        }
@@ -165,14 +165,14 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
         print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated. Also: only 90° elevation')
     elif scatSet['mode'] == 'DDA': 
-        
-        print('you selected DDA as scattering mode. For now the scattering is calculated from a LUT, and the closest scattering point is selected only by choosing the closest size, mass, aspect ratio. Right now only for plate-like crystal and dendritic aggregate.')
+        t0 = time.time()
+        print('you selected DDA as scattering mode. The scattering is calculated from a LUT, and the closest scattering point is selected by choosing the closest size, mass, aspect ratio.')
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrite_freq*.nc') 
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_plate_freq*.nc') 
                 
-                listFreq = [l.split('DDA_LUT_dendrite_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
+                listFreq = [l.split('DDA_LUT_plate_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
                 listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles]
                 listElev = list(dict.fromkeys(listElev))
@@ -209,6 +209,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
         #                       'check your settings'])
         #    dicSettings = None
         print(msg)
+        
     elif scatSet['mode'] == 'DDA_rational': 
         
         print('you selected DDA using rational functions as scattering mode. The scattering is calculated with rational functions where the fitting parameters have been determinded before. For dendrite aggregates I dont have a solution yet!!')
