@@ -29,9 +29,9 @@ def getIntKdp(mcTable, centerHeight):
 	sKDP = mcTable.sKDP * mcTable['sMult']
 	tmpKdp['KDP'] = sKDP.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
 	# now differently for Aggregates and Monomers
-	mcTabledendrite = mcTable.where(mcTable['sPhi']<1,drop=True) # select only plates
+	mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True) # select only plates
 	mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
-	KDPMono = mcTabledendrite['sKDP'] * mcTabledendrite['sMult']
+	KDPMono = mcTableMono['sKDP'] * mcTableMono['sMult']
 	tmpKdp['KDPMono'] = KDPMono.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
 	KDPAgg = mcTableAgg['sKDP'] * mcTableAgg['sMult']
 	tmpKdp['KDPAgg'] = KDPAgg.sum(dim='index').expand_dims({'range':np.asarray(centerHeight).reshape(1)})
