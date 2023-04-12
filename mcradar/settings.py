@@ -8,11 +8,12 @@ from scipy import constants
 import time
 def loadSettings(dataPath=None, elv=90, nfft=512,
                  convolute=True,nave=19,noise_pow=10**(-40/10),
-                 eps_diss=1e-6, theta=0.6 , uwind=10.0 , time_int=2.0 ,
-                 maxVel=3, minVel=-3, ndgsVal=30, 
+                 eps_diss=1e-6, theta=0.6 , variable_theta = True, uwind=1.0 , time_int=2.0 ,
+                 maxVel=3, minVel=-3,  
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
                  heightRes=50, gridBaseArea=1,
+                 ndgsVal=30,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
     #TODO: make SSRGA dependent on aspect ratio, since alpha_eff depents on it and if we have crystals it of course makes a difference there. Also think about having the LUT not sorted by size but rather mass. I could calculate diameter in direction of travel (so vertical extend) from Dmax and ar.
@@ -32,6 +33,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     noise_pow: radar noise power [mm^6/m^3] (default = -40 dB), needed only if convolute == True
     eps_diss: eddy dissipation rate, m/s^2, needed only if convolute == True
     theta: beamwidth of radar, in degree (will later be transformed into rad)
+    variable_theta: if True it will choose theta=1.0 for X-Band radar (this could in future be more variable), otherwise theta=theta
     uwind: vertical wind velocity in m/s
     time_int: integration time of radar in sec
     ndgsVal: number of division points used to integrate over the particle surface (default = 30)
@@ -91,6 +93,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                        'noise_pow':noise_pow,
                        'eps_diss':eps_diss,
                        'theta':theta, 
+                       'variable_theta':variable_theta,
                        'time_int':time_int,
                        'uwind':uwind,
                        }

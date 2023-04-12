@@ -140,7 +140,7 @@ def creatRadarCols(mcTable, dicSettings):
 	storing Ze_H and Ze_V and sKDP of one particle of a 
 	given wavelength
 	"""
-	print(mcTable)
+	#print(mcTable)
 	mcTable['sZeH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan#.assign_coords(elevation=dicSettings['elv'])
 	mcTable['sZeV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
 	mcTable['sKDP'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan

@@ -41,7 +41,8 @@ def fullRadar(dicSettings, mcTable):
 
 			tmpSpecXR = getMultFrecSpec(dicSettings['wl'], dicSettings['elv'],mcTableTmp, dicSettings['velBins'],
 						        		dicSettings['velCenterBin'], (heightEdge1+heightEdge0)/2,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
-						        		dicSettings['eps_diss'], dicSettings['uwind'], dicSettings['time_int'], dicSettings['theta']/2./180.*np.pi, scatSet=dicSettings['scatSet'] )
+						        		dicSettings['eps_diss'], dicSettings['uwind'], dicSettings['time_int'], 
+						        		dicSettings['theta']/2./180.*np.pi,dicSettings['variable_theta'], scatSet=dicSettings['scatSet'] )
 
 
 			#volume normalization

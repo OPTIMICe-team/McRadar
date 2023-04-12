@@ -524,7 +524,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    if (points.Z11flag==1).any():
+                    #print(points.Z11)
+                    if points.Z11flag.sum()>0:
                     	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
@@ -545,7 +546,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
 					                    aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
                     #points['S22r_S11r'] = points.S22r - points.S11r 
-                    if (points.Z11flag==1).any():
+                    if points.Z11flag.sum()>0:
                     	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
