@@ -15,6 +15,8 @@ import pandas as pd
 import warnings
 import matplotlib.pyplot as plt
 
+debugging = False
+
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
                         rho, elv, ndgs=30,
@@ -525,12 +527,14 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     if np.isnan(pointsn.Z11).any(): 
                     # if there are nan values, select the closest (e.g. if we have particles that are larger or smaller than the DDA particles, the interp won't work)
                         count = len(pointsn.Z11) - pointsn.Z11.count() #- pointsn.Z11.dropna(dim='points').count()
-                        print('{0} plates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
+                        if debugging:
+                            print('{0} plates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
                         pointsnan = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), 
 					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
                         points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
-                        print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
+                        if debugging:
+                            print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
                         
                     else:
                         points = pointsn
@@ -542,8 +546,9 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     #print(points.Z11)
-                    #if points.Z11flag.sum()>0:
-                    #	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    if debugging:
+                        if points.Z11flag.sum()>0:
+                        	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
@@ -565,18 +570,21 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     if np.isnan(pointsn.Z11).any(): 
                     # if there are nan values, select the closest (e.g. if we have particles that are larger or smaller than the DDA particles, the interp won't work)
                         count = len(pointsn.Z11) - pointsn.Z11.count()
-                        print('{0} columns of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
+                        if debugging:
+                            print('{0} columns of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
                         pointsnan = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), 
 					                    aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
                         points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
-                        print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
+                        if debugging:
+                            print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
                         
                     else:
                         points = pointsn
                     
-                    #if points.Z11flag.sum()>0:
-                    #	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    if debugging:
+                        if points.Z11flag.sum()>0:
+                        	warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
@@ -599,11 +607,12 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     pointsn = lut.interp(mass = xr.DataArray(np.log10(mcTableAgg['mTot'].values), dims='points')) # interpolate to exact McSnow properties
                     if np.isnan(pointsn.Z11).any():
                         count = len(pointsn.Z11) - pointsn.Z11.count()
-                        
-                        print('{0} aggregates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
+                        if debugging:
+                            print('{0} aggregates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
                         pointsnan = lut.sel(mass = xr.DataArray(np.log10(mcTableAgg['mTot'].values),dims='points'),method='nearest')# if there are nan values, select the closest (e.g. if we have particles that are larger or smaller than the DDA particles, the interp won't work)
                         points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
-                        print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
+                        if debugging:
+                            print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
                         
                     else:
                         points = pointsn
