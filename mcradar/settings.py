@@ -6,9 +6,11 @@ from glob import glob
 import numpy as np
 from scipy import constants
 import time
+
 def loadSettings(dataPath=None, elv=90, nfft=512,
                  convolute=True,nave=19,noise_pow=10**(-40/10),
-                 eps_diss=1e-6, theta=0.6 , variable_theta = True, uwind=1.0 , time_int=2.0 ,
+                 theta=np.array([1.0,0.6,0.6]) , time_int=2.0 , tau=143*1e-9 ,
+                 uwind=5.0, eps_diss=1e-6, k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
                  maxVel=3, minVel=-3,  
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
@@ -16,7 +18,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                  ndgsVal=30,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
-    #TODO: make SSRGA dependent on aspect ratio, since alpha_eff depents on it and if we have crystals it of course makes a difference there. Also think about having the LUT not sorted by size but rather mass. I could calculate diameter in direction of travel (so vertical extend) from Dmax and ar.
+    
+   # TODO make eps_diss, wind and shear dependent on height (so an array with length of height)
     """
     This function defines the settings for starting the 
     calculation.
@@ -28,14 +31,19 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     nfft: number of fourier decomposition (default = 512) 
     maxVel: maximum fall velocity (default = 3) [m/s]
     minVel: minimum fall velocity (default = -3) [m/s]
-    convolute: if True, the spectrum will be convoluted with turbulence and random noise will be added (default = True)
+    convolute: if True, the spectrum will be convoluted with turbulence and random noise (default = True)
     nave: number of spectral averages (default = 19), needed only if convolute == True
     noise_pow: radar noise power [mm^6/m^3] (default = -40 dB), needed only if convolute == True
-    eps_diss: eddy dissipation rate, m/s^2, needed only if convolute == True
     theta: beamwidth of radar, in degree (will later be transformed into rad)
-    variable_theta: if True it will choose theta=1.0 for X-Band radar (this could in future be more variable), otherwise theta=theta
-    uwind: vertical wind velocity in m/s
-    time_int: integration time of radar in sec
+    time_int: integration time of radar in sec, needed only if convolute == True
+    tau: pulse width of radar in seconds (default: 143ns, which is the one used in Ka-Band radar), needed only if convolute == True
+    uwind: x component of wind velocity in m/s (horizontal wind), needed only if convolute == True
+    eps_diss: eddy dissipation rate, m/s^2, needed only if convolute == True
+    k_theta: wind shear in theta direction (when looking zenith this is in x direction). Needs to be provided with shear_height
+    k_phi: wind shear in phi direction (when looking zenith this is in y direction) Needs to be provided with shear_height
+    k_r: wind shear in r direction (when looking zenith this is in z direction) Needs to be provided with shear_height
+    shear_height0: bottom height of wind shear zone
+    shear_height1: top height of wind shear zone
     ndgsVal: number of division points used to integrate over the particle surface (default = 30)
     freq: radar frequency (default = 9.5e9, 35e9, 95e9) [Hz]
     maxHeight: maximum height (default = 5500) [m]
@@ -43,7 +51,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     heightRes: resolution of the height bins (default = 50) [m]
     gridBaseArea: area of the grid base (default = 1) [m^2]
     scatSet: dictionary that defines the settings for the scattering calculations
-      scatSet['mode']: string that defines the scattering mode. Valid values are
+    scatSet['mode']: string that defines the scattering mode. Valid values are
                         - full -> pytmatrix calculations for each superparticle
                         - table -> use only the LUT values, very fast, skips nan values in LUT
                         - wisdom -> compute the pytmatrix solution where LUT is still nan and update LUT values
@@ -53,8 +61,9 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                           Also here no polarimetry so far, therefore separate mode from LUT, will change in future?
                           This mode uses Rayleigh for all particles, regardless of monomer number. 
                           Careful: only use Rayleigh with low frequency such as C,S or X-Band. You need to specify LUT path.
-                        - SSRGA-Rayleigh --> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
-                        - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. Columnar or plate-like scattering table will be chosen depending on the aspect ratio of the particles. You need to specify the path to the LUT.  
+                        - SSRGA-Rayleigh -> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
+                        - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. 
+                        		 Columnar or plate-like scattering table will be chosen depending on the aspect ratio of the particles. You need to specify the path to the LUT.  
                           
       scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA' or 'SSRGA-Rayleigh' or 'DDA' the path to the lut.nc files is required
       scatSet['particle_name']: in case scatSet['mode'] is either 'SSRGA' or 'SSRGA-Rayleigh' the name of the particle to use SSRGA parameters is required. For a list of names see snowScatt. 
@@ -93,9 +102,14 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                        'noise_pow':noise_pow,
                        'eps_diss':eps_diss,
                        'theta':theta, 
-                       'variable_theta':variable_theta,
                        'time_int':time_int,
                        'uwind':uwind,
+                       'tau':tau,
+                       'k_theta':k_theta,
+                       'k_phi':k_phi,
+                       'k_r':k_r,
+                       'shear_height0':shear_height0,
+                       'shear_height1':shear_height1,
                        }
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])

@@ -38,11 +38,23 @@ def fullRadar(dicSettings, mcTable):
 			mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
 						       			mcTableTmp, ndgs=dicSettings['ndgsVal'],
 						        		scatSet=dicSettings['scatSet'])
-
+			
+			#print(heightEdge0,dicSettings['shear_height0'])
+			#print(heightEdge1,dicSettings['shear_height1'])
+			#print(heightEdge0<dicSettings['shear_height0'])
+			#print(heightEdge1>dicSettings['shear_height1'])
+			if (heightEdge0 >= dicSettings['shear_height0']) and (heightEdge1 <= dicSettings['shear_height1']): # only if we are within the shear zone, have shear!
+				k_theta = dicSettings['k_theta']
+				k_phi = dicSettings['k_phi']
+				k_r = dicSettings['k_r']
+				
+			else:
+				k_theta = 0; k_phi = 0; k_r = 0
 			tmpSpecXR = getMultFrecSpec(dicSettings['wl'], dicSettings['elv'],mcTableTmp, dicSettings['velBins'],
 						        		dicSettings['velCenterBin'], (heightEdge1+heightEdge0)/2,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
-						        		dicSettings['eps_diss'], dicSettings['uwind'], dicSettings['time_int'], 
-						        		dicSettings['theta']/2./180.*np.pi,dicSettings['variable_theta'], scatSet=dicSettings['scatSet'] )
+						        		dicSettings['eps_diss'], dicSettings['uwind'],dicSettings['time_int'], dicSettings['theta']/2./180.*np.pi,
+						        		k_theta,k_phi,k_r, dicSettings['tau'],
+						        		scatSet=dicSettings['scatSet'])
 
 
 			#volume normalization
