@@ -211,7 +211,7 @@ def radarScat(sp, wl, K2=0.93):
 
     reflect_hv = prefactor*(sp.Z11 - sp.Z12 + sp.Z21 - sp.Z22)
     #reflect_vh = prefactor*(sp.Z11 + sp.Z12 - sp.Z21 - sp.Z22).values
-    ldr_h = reflect_hv/reflect_hh
+    ldr_h = reflect_hh/reflect_hv
                
     # delta_hv np.arctan2(Z[2,3] - Z[3,2], -Z[2,2] - Z[3,3])
     #a = (Z[2,2] + Z[3,3])**2 + (Z[3,2] - Z[2,3])**2
