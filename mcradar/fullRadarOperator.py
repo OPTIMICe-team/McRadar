@@ -7,6 +7,8 @@ import xarray as xr
 from mcradar import *
 import matplotlib.pyplot as plt
 from mcradar.tableOperator import creatRadarCols
+import time
+debugging=False
 def fullRadar(dicSettings, mcTable):
 	"""
 	Calculates the radar variables over the entire range
@@ -26,6 +28,7 @@ def fullRadar(dicSettings, mcTable):
 	#specXR_turb = xr.Dataset()
 	vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
 	mcTable = creatRadarCols(mcTable, dicSettings)
+	t0 = time.time()
 	for i, heightEdge0 in enumerate(dicSettings['heightRange']):
 
 		heightEdge1 = heightEdge0 + dicSettings['heightRes']
@@ -37,13 +40,9 @@ def fullRadar(dicSettings, mcTable):
 		if mcTableTmp.vel.any():
 			mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
 						       			mcTableTmp, ndgs=dicSettings['ndgsVal'],
-						        		scatSet=dicSettings['scatSet'])
+						        		scatSet=dicSettings['scatSet'])#,height=(heightEdge1+heightEdge0)/2)
 			
-			#print(heightEdge0,dicSettings['shear_height0'])
-			#print(heightEdge1,dicSettings['shear_height1'])
-			#print(heightEdge0<dicSettings['shear_height0'])
-			#print(heightEdge1>dicSettings['shear_height1'])
-			if (heightEdge0 >= dicSettings['shear_height0']) and (heightEdge1 <= dicSettings['shear_height1']): # only if we are within the shear zone, have shear!
+			if (heightEdge0 >= dicSettings['shear_height0']) and (heightEdge1 <= dicSettings['shear_height1']): # only if we are within the shear zone, have shear! TODO make it possible to have profile of wind shear read in!!
 				k_theta = dicSettings['k_theta']
 				k_phi = dicSettings['k_phi']
 				k_r = dicSettings['k_r']
@@ -69,6 +68,8 @@ def fullRadar(dicSettings, mcTable):
 				#print(specXR)
 		else:
 			print('empty dataset at this height range')
+	if debugging:
+		print('total time with selection nearest neighbour for all heights was', time.time()-t0)
 	return specXR
 
 def singleParticleTrajectories(dicSettings, mcTable):
