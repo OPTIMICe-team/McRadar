@@ -488,38 +488,39 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_plate_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
                     # open LUT
                     t0 = time.time()
-                    lut = xr.open_dataset(dataset_filename)
+                    lut = xr.open_dataset(dataset_filename).load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
                     #t0 = time.time()
-                    t0tot = time.time()
-                    pointsn = lut.interp(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                    #t0tot = time.time()
+                    points = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # select nearest value
 					                   aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
                     #print('number of points',len(pointsn.Z11))
-                    #print('interpolation took ',time.time()-t0,' seconds for ',len(pointsn.Z11),' values, so ',(time.time()-t0)/len(pointsn.Z11),' seconds per value')
                     #t0 = time.time()
-                    if np.isnan(pointsn.Z11).any(): 
+                    #lut.close()
+                    #if np.isnan(pointsn.Z11).any(): 
                     # if there are nan values, select the closest (e.g. if we have particles that are larger or smaller than the DDA particles, the interp won't work)
-                        count = len(pointsn.Z11) - pointsn.Z11.count()
-                        if debugging:
-                            print('{0} plates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
-                        pointsnan = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), 
-					                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
-                        points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
+                    #    count = len(pointsn.Z11) - pointsn.Z11.count()
+                    #    if debugging:
+                    #        print('{0} plates of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
+                    #    pointsnan = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), 
+					#                    aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
+					#                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
+                    #    points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
                         #if debugging:
                         #    print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
                         
-                    else:
-                        points = pointsn
+                    #else:
+                    #    points = pointsn
                     
-                    #if debugging:
-                    #    if points.Z11flag.sum()>0:
-                        	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
-                    #        print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                    if debugging:
+                        if points.Z11flag.sum()>0:
+                       	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                            print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    
+                    #print('sel and calculate took ',time.time()-t0,' seconds for ',len(pointsn.Z11),' values, so ',(time.time()-t0)/len(pointsn.Z11),' seconds per value')
+                    '''
                     if debugging:
                         maxDia = mcTablePlate['dia'].max().values
                         minDia = mcTablePlate['dia'].min().values
@@ -553,7 +554,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                             print('we had plates that were out of the bounds of the LUT')
                             print('mass min McSnow ',maxMass, 'mass min LUT ',maxMassLUT)
                         
-                    		
+                    '''
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
@@ -566,64 +567,17 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = str(freSel).ljust(6,'0')#
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_column_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
                     # open LUT
-                    lut = xr.open_dataset(dataset_filename)
+                    lut = xr.open_dataset(dataset_filename).load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
-                    pointsn = lut.interp(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # interpolate to the exact McSnow properties
+                    points = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # select nearest neighbour
 					                   aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
-                    #print('number of points',len(pointsn.Z11))
-                    #print('interpolation took ',time.time()-t0,' seconds for ',len(pointsn.Z11),' values, so ',(time.time()-t0)/len(pointsn.Z11),' seconds per value')
-                    #t0 = time.time()
-                    if np.isnan(pointsn.Z11).any(): 
-                    # if there are nan values, select the closest (e.g. if we have particles that are larger or smaller than the DDA particles, the interp won't work)
-                        count = len(pointsn.Z11) - pointsn.Z11.count()
-                        if debugging:
-                            print('{0} columns of total {1} are lying outside of the LUT, now using nearest neighbour look up instead of interp'.format(count.values,len(pointsn.Z11)))
-                        pointsnan = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), 
-					                    aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
-                        points = xr.where(~np.isnan(pointsn),pointsn,pointsnan) # where we have nan, use nearest value
-                        #if debugging:
-                        #    print('{0} points without nan of total {1} after nearest neighbour lookup'.format(points.Z11.count().values,len(points.Z11)))
-                        
-                    else:
-                        points = pointsn
+                    lut.close()
+                    
                     if debugging:
-                        maxDia = mcTableColumn['dia'].max().values
-                        minDia = mcTableColumn['dia'].min().values
-                        maxDiaLUT = lut.Dmax.max().values
-                        minDiaLUT = lut.Dmax.min().values
-                        maxAr = mcTableColumn['sPhi'].max().values
-                        minAr = mcTableColumn['sPhi'].min().values
-                        maxArLUT = lut.aspect.max().values
-                        minArLUT = lut.aspect.min().values
-                        maxMass = mcTableColumn['mTot'].max().values
-                        minMass = mcTableColumn['mTot'].min().values
-                        maxMassLUT = lut.mass.max().values
-                        minMassLUT = lut.mass.min().values
-                        
-                        if (maxDia > maxDiaLUT): 
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('dia max McSnow ',maxDia, 'dia max LUT ',maxDiaLUT)
-                        if (minDia < minDiaLUT): 
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('dia min McSnow ',minDia, 'dia min LUT ',minDiaLUT)
-                        if (maxAr > maxArLUT): 
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('Ar max McSnow ',maxAr, 'Ar max LUT ',maxArLUT)
-                        if (minAr < minArLUT): 
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('Ar min McSnow ',minAr, 'Ar min LUT ',minArLUT)
-                        if (maxMass > maxMassLUT): 
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('mass max McSnow ',maxMass, 'mass max LUT ',maxMassLUT)
-                        if (minMass < minMassLUT):
-                            print('we had columns that were out of the bounds of the LUT')
-                            print('mass min McSnow ',maxMass, 'mass min LUT ',maxMassLUT)
-                    #if debugging:
-                    #    if points.Z11flag.sum()>0:
-                    #    	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
-                    #        print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                        if points.Z11flag.sum()>0:
+                        	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
+                            print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
 
