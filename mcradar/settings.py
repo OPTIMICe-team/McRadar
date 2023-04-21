@@ -10,7 +10,7 @@ import time
 def loadSettings(dataPath=None, elv=90, nfft=512,
                  convolute=True,nave=19,noise_pow=10**(-40/10),
                  theta=np.array([1.0,0.6,0.6]) , time_int=2.0 , tau=143*1e-9 ,
-                 uwind=5.0, eps_diss=1e-6, k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
+                 uwind=10.0, eps_diss=1e-6, k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
                  maxVel=3, minVel=-3,  
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
