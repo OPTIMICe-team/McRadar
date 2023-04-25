@@ -349,9 +349,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
     if scatSet['mode'] == 'full':
         print('Full mode Tmatrix calculation')
         ##calculation of the reflectivity for AR < 1
-        prefactor = 2*np.pi*wl**4/(np.pi**5*0.93)
         
-        tmpTable = mcTable[mcTable['sPhi']<1].copy()
+        tmpTable = mcTable.where(mcTable['sPhi']<1,drop=True)
         #particle properties
         canting = True
         meanAngle=0
@@ -360,6 +359,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         as_ratio_M1 = tmpTable['sPhi'].values
         rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
         for wl in wls:
+            prefactor = 2*np.pi*wl**4/(np.pi**5*0.93)
+        
             for elv in elvs:            
                 singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
                                                  rho_M1, elv, canting=canting, 
@@ -369,14 +370,15 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
                 reflect_hv = prefactor*(Z11Mat - Z12Mat + Z21Mat - Z22Mat)
                 wlStr = '{:.2e}'.format(wl)
+                print('reflect done')
                 mcTable['sZeH'].loc[elv,wl,tmpTable.index] = reflect_h
                 mcTable['sZeV'].loc[elv,wl,tmpTable.index] = reflect_v
                 mcTable['sZeHV'].loc[elv,wl,tmpTable.index] = reflect_hv
                 mcTable['sKDP'].loc[elv,wl,tmpTable.index] = kdp_M1
 
-
+        
         ##calculation of the reflectivity for AR >= 1
-        tmpTable = mcTable[mcTable['sPhi']>=1].copy()
+        tmpTable = mcTable.where(mcTable['sPhi']>=1,drop=True)
         canting=True
         meanAngle=90
         cantingStd=1
@@ -384,6 +386,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         as_ratio_M1 = tmpTable['sPhi'].values
         rho_M1 = tmpTable['sRho_tot_gmm'].values #[g/mm^3]
         for wl in wls:
+            prefactor = 2*np.pi*wl**4/(np.pi**5*0.93)
             for elv in elvs:     
                 singleScat = calcScatPropOneFreq(wl, radii_M1, as_ratio_M1, 
                                                  rho_M1, elv, canting=canting, 
@@ -392,12 +395,14 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                                                  safeTmatrix=scatSet['safeTmatrix'])
                 reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
                 reflect_hv = prefactor*(Z11Mat - Z12Mat + Z21Mat - Z22Mat)
+                print('reflect done')
+            
                 wlStr = '{:.2e}'.format(wl)
                 mcTable['sZeH'].loc[elv,wl,tmpTable.index] = reflect_h
                 mcTable['sZeV'].loc[elv,wl,tmpTable.index] = reflect_v
                 mcTable['sZeHV'].loc[elv,wl,tmpTable.index] = reflect_hv
                 mcTable['sKDP'].loc[elv,wl,tmpTable.index] = kdp_M1
-
+        
     elif scatSet['mode'] == 'SSRGA':
         print('using SSRGA scattering table for all particles, elevation is set to 90')
         lut = xr.open_dataset(scatSet['lutFile'])
@@ -519,7 +524,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    #print('sel and calculate took ',time.time()-t0,' seconds for ',len(pointsn.Z11),' values, so ',(time.time()-t0)/len(pointsn.Z11),' seconds per value')
+                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
                     '''
                     if debugging:
                         maxDia = mcTablePlate['dia'].max().values
@@ -567,6 +572,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = str(freSel).ljust(6,'0')#
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_column_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
                     # open LUT
+                    t0 = time.time()
                     lut = xr.open_dataset(dataset_filename).load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
                     points = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # select nearest neighbour
@@ -580,7 +586,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-
+                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
                     mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
