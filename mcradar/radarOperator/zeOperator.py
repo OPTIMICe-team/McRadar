@@ -370,7 +370,9 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 reflect_h, reflect_v, refInd, kdp_M1, Z11Mat, Z12Mat, Z21Mat, Z22Mat, Z33Mat, Z44Mat, S11iMat, S22iMat, sMat = singleScat
                 reflect_hv = prefactor*(Z11Mat - Z12Mat + Z21Mat - Z22Mat)
                 wlStr = '{:.2e}'.format(wl)
-                print('reflect done')
+                #print('reflect done')
+                #print(tmpTable.index)
+                #print(tmpTable)
                 mcTable['sZeH'].loc[elv,wl,tmpTable.index] = reflect_h
                 mcTable['sZeV'].loc[elv,wl,tmpTable.index] = reflect_v
                 mcTable['sZeHV'].loc[elv,wl,tmpTable.index] = reflect_hv
@@ -404,23 +406,26 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 mcTable['sKDP'].loc[elv,wl,tmpTable.index] = kdp_M1
         
     elif scatSet['mode'] == 'SSRGA':
-        print('using SSRGA scattering table for all particles, elevation is set to 90')
+        #print('using SSRGA scattering table for all particles, elevation is set to 90')
         lut = xr.open_dataset(scatSet['lutFile'])
         for wl in wls:
             for elv in elvs:
-                freq = (constants.c / wl*1e3)
+                wl_m = wl*1e-3
+                freq = constants.c / wl_m
+                #prefactor = wl_m**4/(np.pi**5*K2)
+                prefactor = 2*wl**4/(np.pi**4*K2)
                 mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
                 mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True)
                 points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
                                  size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
                                  method='nearest')
                 
-                ssCbck = points.Cbck.values#*1e6 # Tmatrix output is in mm, so here we also have to use ssCbck in mm
-                prefactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
+                ssCbck = points.Cbck.values*1e6 # Tmatrix output is in mm², so here we also have to use ssCbck in mm²
+                #refactor = wl**4/(np.pi**5*K2) # other prefactor: 2*pi*...
                 wlStr = '{:.2e}'.format(wl)
                 #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18
                 #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = np.nan
-                mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck * 1e18
+                mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck# * 1e18
     elif scatSet['mode'] == 'Rayleigh':
         print('using Rayleigh approximation for all particles, only elevation 90 so far')
         for wl in wls:
@@ -433,6 +438,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 qbck_h = 4*X**4*K2 # calculate backscattering efficiency
                 cbck_h = qbck_h  * re**2 * np.pi/((2*np.pi)**2) #need to divide by (2*pi)^2 to get same as ssrga
                 '''
+                '''
                 wlStr = '{:.2e}'.format(wl)
                 prefactor = (wl*1e-3)**4/(np.pi**5*K2)
                 
@@ -440,7 +446,14 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 k = 2 * np.pi / (wl*1e-3)
                 sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
                 #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)] = prefactor * sigma * 1e18 # 1e18 to convert to mm6/m3
-                mcTable['sZeH'].loc[elv,wl,mcTable.index] = prefactor * sigma * 1e18
+                '''
+                wlStr = '{:.2e}'.format(wl)
+                prefactor = wl**4/(np.pi**5*K2)
+            
+                # rayleigh approximation according to Jussi Leinonens diss:             
+                k = 2 * np.pi / (wl*1e-3)
+                sigma = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTable['mTot']/mcTable['sRho_tot']))**2 *1e6 /np.pi
+                mcTable['sZeH'].loc[elv,wl,mcTable.index] = prefactor * sigma# * 1e18
     elif scatSet['mode'] == 'SSRGA-Rayleigh':
         print('using SSRGA for aggregates and Rayleigh approximation for crystals')
         
@@ -452,13 +465,14 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 wlStr = '{:.2e}'.format(wl) # wl here is in mm!!
                 wl_m = wl*1e-3
                 freq = constants.c / wl_m
-                prefactor = wl_m**4/(np.pi**5*K2)            
+                #prefactor = wl**4/(np.pi**4*K2)            
+                prefactor = 2*wl**4/(np.pi**4*K2)
                 # rayleigh approximation for crystal:             
                 k = 2 * np.pi / (wl_m)
                 if len(mcTableMono['mTot']) > 0:
                   ssCbck = 4*np.pi*np.abs(3*k**2/(4*np.pi)*np.sqrt(K2)*(mcTableMono['mTot']/mcTableMono['sRho_tot']))**2/np.pi #need to divide by pi to get same as ssrga
                   #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']==1] = prefactor * ssCbck * 1e18 # 1e18 to convert to mm6/m3
-                  mcTable['sZeH'].loc[elv,wl,mcTableMono.index] = prefactor * ssCbck * 1e18
+                  mcTable['sZeH'].loc[elv,wl,mcTableMono.index] = prefactor * (ssCbck * 1e6)
                 
                 # ssrga for aggregates:
                 points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
@@ -466,9 +480,9 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                                  method='nearest') # select nearest particle properties.
 
                 if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
-                  ssCbck = points.Cbck.values # in mm^3 
+                  ssCbck = points.Cbck.values*1e6 # in mm^3 
                   #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
-                  mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck * 1e18
+                  mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck 
     
         
     elif scatSet['mode'] == 'DDA':
@@ -477,7 +491,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         # different DDA LUT for monomers and Aggregates. 
         mcTableCry = mcTable.where(mcTable['sNmono']==1,drop=True) # select only cry
         mcTablePlate = mcTableCry.where(mcTableCry['sPhi']<1,drop=True) # select only plates
-        mcTableColumn = mcTableCry.where(mcTableCry['sPhi']>1,drop=True) # select only needle #TODO: shall I make this automatic, so for all ar> 1 select needle and for all ar<1 select dendrite?
+        mcTableColumn = mcTableCry.where(mcTableCry['sPhi']>1,drop=True) # select only needle 
         mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True) # select only aggregates
         
         for wl in wls:
@@ -591,7 +605,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTableColumn.index] = kdp_M1
-
+                '''
                 #- now for aggregates
                 if len(mcTableAgg.mTot)>0: # only if aggregates are here
                     
@@ -622,7 +636,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     mcTable['sZeV'].loc[elv,wl,mcTableAgg.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableAgg.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTableAgg.index] = kdp_M1
-                
+                '''
         #print('all calculations for all elv and wl took ', time.time() - t00,' seconds')
         #quit()
     elif scatSet['mode'] == 'DDA_rational':

@@ -68,13 +68,13 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
     if (scatSet['mode'] == 'SSRGA') or (scatSet['mode'] == 'Rayleigh') or (scatSet['mode'] == 'SSRGA-Rayleigh'):
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
         
-        intSpec = mcTable.groupby_bins("vel", velBins).sum()
-        specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'}).assign_coords({'vel':velCenterBins})
+        group = mcTable.groupby_bins('vel', velBins,labels=velCenterBins).sum()
+        specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
         if convolute == True:
-            for wl in wls:
+            for wl,th in zip(wls,theta):
                 for elv in elvs:
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
-                                                                      noise_pow,nave,th,uwind,time_int,centerHeight,shear,tau)
+                                                                       noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
     
     else:
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
