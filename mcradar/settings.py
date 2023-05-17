@@ -6,20 +6,22 @@ from glob import glob
 import numpy as np
 from scipy import constants
 import time
+import pandas as pd
+import xarray as xr
 
-def loadSettings(dataPath=None, elv=90, nfft=512,
+def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                  convolute=True,nave=19,noise_pow=10**(-40/10),
                  theta=np.array([1.0,0.6,0.6]) , time_int=2.0 , tau=143*1e-9 ,
-                 uwind=10.0, eps_diss=1e-6, k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
+                 uwind=10.0, eps_diss=np.array([1e-6]), k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
                  maxVel=3, minVel=-3,  
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
                  heightRes=50, gridBaseArea=1,
-                 ndgsVal=30,
+                 ndgsVal=30,attenuation=True,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
     
-   # TODO make eps_diss, wind and shear dependent on height (so an array with length of height)
+   # TODO make eps_diss, wind and shear dependent on height (so an array with length of height). One idea: read in a file with height and eps_diss and then it can select the according eps_diss in full_radar that corresponds to the height. Or: already have eps_diss specified for all heights and just loop through it in fullRadar
     """
     This function defines the settings for starting the 
     calculation.
@@ -50,6 +52,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
     minHeight: minimun height (default = 0) [m]
     heightRes: resolution of the height bins (default = 50) [m]
     gridBaseArea: area of the grid base (default = 1) [m^2]
+    attenuation: get path integrated attenuation based on water vapour, O2 and H2O. This uses PAMTRA
     scatSet: dictionary that defines the settings for the scattering calculations
     scatSet['mode']: string that defines the scattering mode. Valid values are
                         - full -> pytmatrix calculations for each superparticle
@@ -81,7 +84,9 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
       scatSet['safeTmatrix'] = False
 
     if dataPath != None:
-        
+        #if len(eps_diss)>1:
+        #print(len(eps_diss))
+        #quit()
         dicSettings = {'dataPath':dataPath,
                        'elv':elv,
                        'nfft':nfft,
@@ -110,6 +115,7 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
                        'k_r':k_r,
                        'shear_height0':shear_height0,
                        'shear_height1':shear_height1,
+                       'attenuation':attenuation,
                        }
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
@@ -117,13 +123,66 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
 
         dicSettings['velBins']=velBins
         dicSettings['velCenterBin']=velCenterBin
+    elif PSD == True:
+        dicSettings = {'elv':elv,
+                       'nfft':nfft,
+                       'maxVel':maxVel,
+                       'minVel':minVel,
+                       'velRes':(maxVel - minVel)/nfft,
+                       'freq':freq,
+                       'wl':(constants.c / freq) * 1e3, #[mm]
+                       'ndgsVal':ndgsVal,
+                       'maxHeight':maxHeight,
+                       'minHeight':minHeight,
+                       'heightRes':heightRes,
+                       'heightRange':np.arange(minHeight, maxHeight, heightRes),
+                       'gridBaseArea':gridBaseArea,
+                       'scatSet':scatSet,
+                       'convolute':convolute,
+                       'nave':nave,
+                       'noise_pow':noise_pow,
+                       'eps_diss':eps_diss,
+                       'theta':theta, 
+                       'time_int':time_int,
+                       'uwind':uwind,
+                       'tau':tau,
+                       'k_theta':k_theta,
+                       'k_phi':k_phi,
+                       'k_r':k_r,
+                       'shear_height0':shear_height0,
+                       'shear_height1':shear_height1,
+                       'attenuation':attenuation,
+                       }
 
+        velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
+        velCenterBin = velBins[0:-1]+np.diff(velBins)/2.
+
+        dicSettings['velBins']=velBins
+        dicSettings['velCenterBin']=velCenterBin
     else:
         msg = ('\n').join(['please load the path to the McSnow output', 
                             'use the dataPath parameter for it',
                             'e.g. loadSettings(dataPath="/data/path/.")'])
         print(msg)
         dicSettings = None
+    print(attenuation)
+    if attenuation == True:
+        if atmoFile != None: 
+            atmoFile = np.loadtxt(atmoFile)
+            height = atmoFile[:,0]
+            temp = atmoFile[:,2]# -273.15
+            atmoPD = pd.DataFrame(data=temp,index=height,columns=['temp'])
+            atmoPD.index.name='range'
+            atmoPD['press'] = atmoFile[:,3]
+            atmoPD['relHum'] = atmoFile[:,6]
+            atmoXR = atmoPD.to_xarray()
+            atmoReindex = atmoXR.reindex({'range':dicSettings['heightRange']+dicSettings['heightRes']/2},method='nearest')
+            dicSettings['temp']=atmoReindex.temp
+            dicSettings['relHum']=atmoReindex.relHum
+            dicSettings['press']=atmoReindex.press
+            
+        else:
+            msg = ('\n').join(['since you want to do the attenuation correction you need to give an atmoFile as input.'])
     if (scatSet['mode'] == 'table') or (scatSet['mode']=='wisdom'):
         print(scatSet)
         if 'lutPath' in scatSet.keys():
@@ -179,8 +238,8 @@ def loadSettings(dataPath=None, elv=90, nfft=512,
             dicSettings = None
         print(msg)
     elif scatSet['mode'] == 'Rayleigh':
-        dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
-        print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated. Also: only 90° elevation')
+        #dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
+        print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated')
     elif scatSet['mode'] == 'DDA': 
         t0 = time.time()
         print('you selected DDA as scattering mode. The scattering is calculated from a LUT, and the closest scattering point is selected by choosing the closest size, mass, aspect ratio.')
