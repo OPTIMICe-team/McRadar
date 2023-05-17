@@ -184,6 +184,7 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
 
 
 def radarScat(sp, wl, K2=0.93):
+#TODO check if K2 is for ice or liquid!
     """
     Calculates the single scattering radar quantities from the matrix values
     Parameters
@@ -222,7 +223,12 @@ def radarScat(sp, wl, K2=0.93):
     #Ah = 4.343e-3 * 2 * scatterer.wavelength * sp.S22i.values # attenuation horizontal polarization
     #Av = 4.343e-3 * 2 * scatterer.wavelength * sp.S11i.values # attenuation vertical polarization
 
-    return reflect_hh, reflect_vv, reflect_hv, kdp, rho_hv
+    #- test: calculate extinction: TODO: test Cextx that is given in DDA with this calculation.
+    k = 2 * np.pi / (wl)
+    cext_hh = sp.S22i*4.0*np.pi/k
+    cext_vv = sp.S11i*4.0*np.pi/k
+    
+    return reflect_hh, reflect_vv, reflect_hv, kdp, rho_hv, cext_hh, cext_vv
 
 def rational3d(x,y,z,a,b):
     if len(a)==17 and len(b)==9:
@@ -537,7 +543,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                        	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
-                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
                     '''
                     if debugging:
@@ -578,6 +584,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTablePlate.index] = kdp_M1
+                    mcTable['sCextH'].loc[elv,wl,mcTablePlate.index] = cext_hh
+                    mcTable['sCextV'].loc[elv,wl,mcTablePlate.index] = cext_vv
                    
                 if len(mcTableColumn.sPhi)>0: # only possible if we have column-like particles
                     # select correct LUT:
@@ -599,13 +607,15 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                         	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
-                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
                     print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
                     mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTableColumn.index] = kdp_M1
-                '''
+                    mcTable['sCextH'].loc[elv,wl,mcTableColumn.index] = cext_hh
+                    mcTable['sCextV'].loc[elv,wl,mcTableColumn.index] = cext_vv
+                
                 #- now for aggregates
                 if len(mcTableAgg.mTot)>0: # only if aggregates are here
                     
@@ -631,12 +641,14 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                         points = pointsn
                     points = 10**points
                     
-                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv = radarScat(points, wl) # get scattering properties from Matrix entries
+                    reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # get scattering properties from Matrix entries
                     mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = reflect_h
+                    mcTable['sCextH'].loc[elv,wl,mcTableAgg.index] = cext_hh
+                    mcTable['sCextV'].loc[elv,wl,mcTableAgg.index] = cext_vv
                     mcTable['sZeV'].loc[elv,wl,mcTableAgg.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableAgg.index] = reflect_hv
                     mcTable['sKDP'].loc[elv,wl,mcTableAgg.index] = kdp_M1
-                '''
+                
         #print('all calculations for all elv and wl took ', time.time() - t00,' seconds')
         #quit()
     elif scatSet['mode'] == 'DDA_rational':

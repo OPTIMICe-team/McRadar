@@ -8,7 +8,7 @@ from mcradar import *
 import matplotlib.pyplot as plt
 from mcradar.tableOperator import creatRadarCols
 import time
-debugging=False
+debugging=True
 def fullRadar(dicSettings, mcTable):
 	"""
 	Calculates the radar variables over the entire range
@@ -29,6 +29,7 @@ def fullRadar(dicSettings, mcTable):
 	vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
 	mcTable = creatRadarCols(mcTable, dicSettings)
 	t0 = time.time()
+	att_atm0 = 0.; att_ice_HH0=0.; att_ice_VV0=0.
 	for i, heightEdge0 in enumerate(dicSettings['heightRange']):
 
 		heightEdge1 = heightEdge0 + dicSettings['heightRes']
@@ -58,18 +59,55 @@ def fullRadar(dicSettings, mcTable):
 
 			#volume normalization
 			tmpSpecXR = tmpSpecXR/vol
-
+			
 			specXR = xr.merge([specXR, tmpSpecXR])
-
+			
+			if dicSettings['attenuation'] == True:
+				tmpAtt = get_attenuation(mcTableTmp, dicSettings['wl'], dicSettings['elv'],
+																			dicSettings['temp'].sel(range=(heightEdge1+heightEdge0)/2), dicSettings['relHum'].sel(range=(heightEdge1+heightEdge0)/2), dicSettings['press'].sel(range=(heightEdge1+heightEdge0)/2),
+																			dicSettings['scatSet']['mode'],	vol,(heightEdge1+heightEdge0)/2,dicSettings['heightRes'])#,att_atm0,att_ice_HH0,att_ice_VV0) 			
+				
+				specXR = xr.merge([specXR,tmpAtt])
+				#print(specXR)
+				#quit()
+				
+		
 			if (dicSettings['scatSet']['mode'] == 'full') or (dicSettings['scatSet']['mode'] == 'table') or (dicSettings['scatSet']['mode'] == 'wisdom') or (dicSettings['scatSet']['mode'] == 'DDA'):
 			#calculating the integrated kdp
 				tmpKdpXR =  getIntKdp(mcTableTmp,(heightEdge1+heightEdge0)/2)
 				specXR = xr.merge([specXR, tmpKdpXR/vol])
 				#print(specXR)
+					
+		
 		else:
 			print('empty dataset at this height range')
+	
+	if dicSettings['attenuation'] == True:
+		#print(2*np.cumsum(specXR.att_atmo.cumsum(dim='range')))
+		#plt.plot(specXR.att_atmo.sel(wavelength=specXR.wavelength[0],elevation=90),specXR.range,label='atmo')
+		#plt.plot(specXR.att_ice_HH.sel(wavelength=specXR.wavelength[0],elevation=90),specXR.range,label='ice')
+		#plt.savefig('test_att_atmo_dh.png')
+		#plt.show()
+		#quit()
+		specXR['att_atm_ice_HH'] = 2*specXR.att_ice_HH.cumsum(dim='range') + 2*specXR.att_atmo.cumsum(dim='range')
+		specXR['att_atm_ice_VV'] = 2*specXR.att_ice_VV.cumsum(dim='range') + 2*specXR.att_atmo.cumsum(dim='range')
+		specXR.att_atm_ice_HH.attrs['long_name'] = '2 way attenuation at HH polarization'
+		specXR.att_atm_ice_HH.attrs['unit'] = 'dB'
+		specXR.att_atm_ice_HH.attrs['comment'] = '2 way attenuation for ice particles and atmospheric gases (N2,O2,H2O). The spectra are divided my this, so to get unattenuated spectra, multiply with this (in linear units)'
+		
+		specXR.att_atm_ice_HH.attrs['long_name'] = '2 way attenuation at VV polarization'
+		specXR.att_atm_ice_HH.attrs['unit'] = 'dB'
+		specXR.att_atm_ice_HH.attrs['comment'] = '2 way attenuation for ice particles and atmospheric gases (N2,O2,H2O). The spectra are divided my this, so to get unattenuated spectra, multiply with this (in linear units)'
+		
+		if (dicSettings['scatSet']['mode'] == 'SSRGA') or (dicSettings['scatSet']['mode'] == 'Rayleigh') or (dicSettings['scatSet']['mode'] == 'SSRGA-Rayleigh'):
+			specXR['spec_H'] = specXR.spec_H/(10**(specXR.att_atm_ice_HH/10))
+		else:		
+			specXR['spec_H_att'] = specXR.spec_H/(10**(specXR.att_atm_ice_HH/10))
+			specXR['spec_V'] = specXR.spec_V/(10**(specXR.att_atm_ice_VV/10))
+			specXR['spec_HV'] = specXR.spec_HV/(10**(specXR.att_atm_ice_HH/10))
+		
 	if debugging:
-		print('total time with selection nearest neighbour for all heights was', time.time()-t0)
+		print('total time with selection nearest neighbour and not .load() for all heights was', time.time()-t0)
 	return specXR
 
 def singleParticleTrajectories(dicSettings, mcTable):

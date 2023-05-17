@@ -36,6 +36,7 @@ def getMcSnowTable(mcSnowPath):
     if 'sPhi' not in mcTable:
       mcTable['sPhi'] = 1.0 # simply add sPhi = 1
     mcTable['sRho_tot_gmm'] = mcTable['sRho_tot']*1e-6 # in g/mm³
+            
     #if 'sRho_tot' not in selMcTable:
     #  try:
     #    selMcTable = calcRhophys(selMcTable)
@@ -149,6 +150,10 @@ def creatRadarCols(mcTable, dicSettings):
 	mcTable['sZeMultV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
 	mcTable['sKDPMult'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
 	mcTable['sZeMultHV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sCextH'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sCextV'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sCextHMult'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
+	mcTable['sCextVMult'] = mcTable.dia.expand_dims(dim={'elevation':dicSettings['elv'],'wavelength':dicSettings['wl']})*np.nan
 	
 	return mcTable
 
@@ -166,7 +171,7 @@ def calcRhophys(mcTable):
     """
     rho_ice = 919.0
     rho_liq = 1000.0
-    v_w_out = mcTable['sMrime']/rho_ice + mcTable['sMliqu']/rho_ice - mcTable['sVrime'] # do we have liquid water on the outside of the particle?
+    v_w_out = mcTable['sMrime']/rho_ice + mcTable['sMliqu']/rho_liq - mcTable['sVrime'] # do we have liquid water on the outside of the particle?
     v_tot = (mcTable['sMice'] + mcTable['sMmelt'])/rho_ice + mcTable['sVrime'] + v_w_out # total volume of the particle
     mcTable['sRho_tot'] = mcTable['mTot'] / v_tot
     return mcTable
