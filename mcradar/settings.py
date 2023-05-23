@@ -17,7 +17,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
                  heightRes=50, gridBaseArea=1,
-                 ndgsVal=30,attenuation=True,
+                 ndgsVal=30,attenuation=False,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
     
