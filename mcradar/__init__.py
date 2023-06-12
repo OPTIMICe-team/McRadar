@@ -13,6 +13,7 @@ from .settings import loadSettings
 from .tableOperator import getMcSnowTable
 
 from .radarOperator.spectraOperator import getMultFrecSpec
+from .radarOperator.spectraOperator import convoluteSpec
 from .radarOperator.zeOperator import calcParticleZe
 from .radarOperator.kdpOperator import getIntKdp
 
