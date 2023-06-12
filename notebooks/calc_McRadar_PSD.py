@@ -20,7 +20,7 @@ def Modified_gamma(D, lam, mu, nu=1):
 	return D**mu*np.exp(-lam*D**nu)
 
 
-lutPath = '/project/meteo/work/L.Terzi/McRadar/LUT/DDA/'
+lutPath = '../LUT/DDA/'
 
 frequency =  np.array([9.6e9, 35.6e9, 94.0e9]) # frequencies
 Dmax = np.linspace(0.01e-3, 10.0e-3, 100) # list of sizes
