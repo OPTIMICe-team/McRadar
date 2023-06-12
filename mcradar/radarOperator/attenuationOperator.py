@@ -7,7 +7,7 @@ from scipy import constants
 import warnings
 import matplotlib.pyplot as plt
 import time
-import pyPamtra
+#import pyPamtra
 
 def get_attenuation(mcTable,wls,elvs,temp,relHum,press,mode,vol,centerHeight,heightRes):#,att_atm0,att_ice_HH0,atm_att_ice_VV0):
 	'''
