@@ -70,12 +70,14 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
         
         group = mcTable.groupby_bins('vel', velBins,labels=velCenterBins).sum()
         specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
+        #specTable['specBroad_H'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
+        
         if convolute == True:
             for wl,th in zip(wls,theta):
                 for elv in elvs:
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                                                                        noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
-    
+    	
     else:
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
         mcTable['sZeMultV'] = mcTable['sZeV'] * mcTable['sMult']
@@ -85,11 +87,17 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
         specTable['spec_H'] = group['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
         specTable['spec_V'] = group['sZeMultV'].rename({'vel_bins':'vel'})
         specTable['spec_HV'] = group['sZeMultHV'].rename({'vel_bins':'vel'})
+        #specTable['specBroad_H'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
+        #specTable['specBroad_V'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
+        #specTable['specBroad_HV'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
+        
         if convolute == True:
             for wl,th in zip(wls,theta):
             	
                 for elv in elvs:
                     mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
+                    #specTable['spec_H'].loc[:,elv,wl],specTable['specBroad_H'].loc[elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                    #                                                  noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                                                                       noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                     specTable['spec_V'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
@@ -166,7 +174,7 @@ def convoluteTurb(spec,spec_turb,vel,specBroad,dv):
     return spec_turb
 
 # TODO: only generate one wind shear height, otherwise no windshear!! Or other solution, however, right now wind shear gets added to entire profile... Or: make wind shear, uwind and eps height dependent
-def convoluteSpec(spec,wl,vel,eps,noise_pow,nave,theta,u_wind,time_int,height,k_theta,k_phi,k_r,tau):
+def convoluteSpec(spec,wl,vel,eps,noise_pow,nave,theta,u_wind,time_int,height,k_theta,k_phi,k_r,tau,PSD=False):
     """
     this function convolutes the spectrum with turbulence and adds random noise, optional!
     
@@ -214,6 +222,8 @@ def convoluteSpec(spec,wl,vel,eps,noise_pow,nave,theta,u_wind,time_int,height,k_
     #- convolute random noise
     spectrum = convoluteNoise(spec_turb,vel,noise_pow,nave)
     
-    return spectrum
-    
+    if PSD == True:
+    	return spectrum, specBroad
+    else:
+    	return spectrum
     
