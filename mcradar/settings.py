@@ -87,7 +87,8 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         #if len(eps_diss)>1:
         #print(len(eps_diss))
         #quit()
-        dicSettings = {'dataPath':dataPath,
+        del_v = (maxVel-minVel) / nfft
+		dicSettings = {'dataPath':dataPath,
                        'elv':elv,
                        'nfft':nfft,
                        'maxVel':maxVel,
@@ -104,7 +105,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'scatSet':scatSet,
                        'convolute':convolute,
                        'nave':nave,
-                       'noise_pow':noise_pow,
+                       'noise_pow':noise_pow*(nfft*del_v),
                        'eps_diss':eps_diss,
                        'theta':theta, 
                        'time_int':time_int,
@@ -124,6 +125,8 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         dicSettings['velBins']=velBins
         dicSettings['velCenterBin']=velCenterBin
     elif PSD == True:
+        del_v = (maxVel-minVel) / nfft
+		
         dicSettings = {'elv':elv,
                        'nfft':nfft,
                        'maxVel':maxVel,
@@ -140,7 +143,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'scatSet':scatSet,
                        'convolute':convolute,
                        'nave':nave,
-                       'noise_pow':noise_pow,
+                       'noise_pow':noise_pow*(nfft*del_v),#noise_pow,
                        'eps_diss':eps_diss,
                        'theta':theta, 
                        'time_int':time_int,
@@ -156,7 +159,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
         velCenterBin = velBins[0:-1]+np.diff(velBins)/2.
-
+		#radar_Pnoise = 
         dicSettings['velBins']=velBins
         dicSettings['velCenterBin']=velCenterBin
     else:
@@ -165,7 +168,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                             'e.g. loadSettings(dataPath="/data/path/.")'])
         print(msg)
         dicSettings = None
-    print(attenuation)
+    #print(attenuation)
     if attenuation == True:
         if atmoFile != None: 
             atmoFile = np.loadtxt(atmoFile)
