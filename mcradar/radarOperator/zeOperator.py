@@ -15,7 +15,7 @@ import pandas as pd
 import warnings
 import matplotlib.pyplot as plt
 import time
-debugging = True
+debugging = False
 
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
@@ -512,14 +512,15 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_plate_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
                     # open LUT
                     t0 = time.time()
-                    lut = xr.open_dataset(dataset_filename).load()
+                    lut = xr.open_dataset(dataset_filename,chunks={'Dmax':20,'aspect':20,'mass':20})#.load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
                     #t0 = time.time()
                     #t0tot = time.time()
                     points = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # select nearest value
 					                   aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
-                    lut.close()
+                    #lut.close()
+                    
                     #print('number of points',len(pointsn.Z11))
                     #t0 = time.time()
                     #lut.close()
@@ -544,43 +545,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
+                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates')
                     
-                    '''
-                    if debugging:
-                        maxDia = mcTablePlate['dia'].max().values
-                        minDia = mcTablePlate['dia'].min().values
-                        maxDiaLUT = lut.Dmax.max().values
-                        minDiaLUT = lut.Dmax.min().values
-                        maxAr = mcTablePlate['sPhi'].max().values
-                        minAr = mcTablePlate['sPhi'].min().values
-                        maxArLUT = lut.aspect.max().values
-                        minArLUT = lut.aspect.min().values
-                        maxMass = mcTablePlate['mTot'].max().values
-                        minMass = mcTablePlate['mTot'].min().values
-                        maxMassLUT = lut.mass.max().values
-                        minMassLUT = lut.mass.min().values
-                        
-                        if (maxDia > maxDiaLUT): 
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('dia max McSnow ',maxDia, 'dia max LUT ',maxDiaLUT)
-                        if (minDia < minDiaLUT): 
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('dia min McSnow ',minDia, 'dia min LUT ',minDiaLUT)
-                        if (maxAr > maxArLUT): 
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('Ar max McSnow ',maxAr, 'Ar max LUT ',maxArLUT)
-                        if (minAr < minArLUT): 
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('Ar min McSnow ',minAr, 'Ar min LUT ',minArLUT)
-                        if (maxMass > maxMassLUT): 
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('mass max McSnow ',maxMass, 'mass max LUT ',maxMassLUT)
-                        if (minMass < minMassLUT):
-                            print('we had plates that were out of the bounds of the LUT')
-                            print('mass min McSnow ',maxMass, 'mass min LUT ',maxMassLUT)
-                        
-                    '''
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
@@ -596,12 +562,12 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_column_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
                     # open LUT
                     t0 = time.time()
-                    lut = xr.open_dataset(dataset_filename).load()
+                    lut = xr.open_dataset(dataset_filename,chunks={'Dmax':20,'aspect':20,'mass':20})#.load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
                     points = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # select nearest neighbour
 					                   aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
-                    lut.close()
+                    #lut.close()
                     
                     if debugging:
                         if points.Z11flag.sum()>0:
@@ -609,7 +575,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns, so ',(time.time()-t0)/len(points.Z11),' seconds per value')
+                    print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns')
                     mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
@@ -625,7 +591,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = str(freSel).ljust(6,'0')#
                     #print('frequency ', f/1.e9, 'lut frequency ', freSel)
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
-                    lut = xr.open_dataset(dataset_filename).load()
+                    lut = xr.open_dataset(dataset_filename).load()#,chunks={'mass':20})#.load()
                     lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
                     points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),method='nearest')
                     lut.close()
