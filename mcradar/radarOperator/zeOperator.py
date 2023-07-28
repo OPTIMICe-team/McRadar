@@ -13,9 +13,11 @@ from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
 import pandas as pd
 import warnings
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
+
 debugging = False
+
 
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
