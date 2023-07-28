@@ -20,3 +20,4 @@ from .radarOperator.kdpOperator import getIntKdp
 from .fullRadarOperator import fullRadar
 
 from .fullRadarOperator import singleParticleTrajectories
+from .fullRadarOperator import singleParticleScat
