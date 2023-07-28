@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from mcradar.tableOperator import creatRadarCols
 import time
 debugging=True
+
+
 def fullRadar(dicSettings, mcTable):
 	"""
 	Calculates the radar variables over the entire range
@@ -42,14 +44,12 @@ def fullRadar(dicSettings, mcTable):
 			mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
 						       			mcTableTmp, ndgs=dicSettings['ndgsVal'],
 						        		scatSet=dicSettings['scatSet'])#,height=(heightEdge1+heightEdge0)/2)
-			
+			#quit()
 			if (heightEdge0 >= dicSettings['shear_height0']) and (heightEdge1 <= dicSettings['shear_height1']): # only if we are within the shear zone, have shear! TODO make it possible to have profile of wind shear read in!!
-				k_theta = dicSettings['k_theta']
-				k_phi = dicSettings['k_phi']
-				k_r = dicSettings['k_r']
+				k_theta,k_phi,k_r = dicSettings['k_theta'], dicSettings['k_phi'], dicSettings['k_r']
 				
 			else:
-				k_theta = 0; k_phi = 0; k_r = 0
+				k_theta, k_phi, k_r = 0,0,0
 			tmpSpecXR = getMultFrecSpec(dicSettings['wl'], dicSettings['elv'],mcTableTmp, dicSettings['velBins'],
 						        		dicSettings['velCenterBin'], (heightEdge1+heightEdge0)/2,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
 						        		dicSettings['eps_diss'], dicSettings['uwind'],dicSettings['time_int'], dicSettings['theta']/2./180.*np.pi,
@@ -58,6 +58,10 @@ def fullRadar(dicSettings, mcTable):
 
 
 			#volume normalization
+			#for var in tmpSpecXR:
+		#		print(var)
+		#		if 'Broad' not in var:
+		#			tmpSpecXR[var] = tmpSpecXR[var]/vol
 			tmpSpecXR = tmpSpecXR/vol
 			
 			specXR = xr.merge([specXR, tmpSpecXR])
@@ -124,35 +128,69 @@ def singleParticleTrajectories(dicSettings, mcTable):
     specXR: xarray dataset with the single particle scattering properties
     """
 
-
+    t0 = time.time()
     specXR = xr.Dataset()
     #specXR_turb = xr.Dataset()
+    mcTable = creatRadarCols(mcTable, dicSettings)
     counts = np.ones_like(dicSettings['heightRange'])*np.nan
     vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
 	
-    for i, pID in enumerate(mcTable['sMult'].unique()):
+    for i, pID in enumerate(np.unique(mcTable['sMult'].values)):
     
-        mcTableTmp = mcTable[(mcTable['sMult']==pID)].copy()
-        
-        print(len(mcTable['sMult'].unique()),i)
+        mcTableTmp = mcTable.where(mcTable.sMult==pID,drop=True)
+        print(len(np.unique(mcTable['sMult'].values)),i)
         mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
                                     mcTableTmp, ndgs=dicSettings['ndgsVal'],
                                     scatSet=dicSettings['scatSet'])
-        print('done with scattering')
-        mcTableTmp = mcTableTmp.set_index('sHeight')
-        specTable = mcTableTmp.to_xarray()
-        
-        specTable = specTable.reindex(sHeight=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
-        specTable = specTable.drop_vars('sMult')
-        specTable = specTable.expand_dims(dim='sMult').assign_coords(sMult=[pID])
-        
-        #specTable = specTable.expand_dims(dim='range').assign_coords(range=[centerHeight])
-        specXR = xr.merge([specXR, specTable])
-        
-        #print(specXR)
-        #quit()
+        mcTableTmp = mcTableTmp.assign_coords(index=mcTableTmp.sHeight).rename({'index':'range'})#.set_index('sHeight')
+        mcTableTmp = mcTableTmp.reindex(range=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
+        mcTableTmp = mcTableTmp.drop_vars('sMult')
+        mcTableTmp = mcTableTmp.expand_dims(dim='sMult').assign_coords(sMult=[pID])
 
+        specXR = xr.merge([specXR, mcTableTmp])
+        
+    print('total time was ', time.time()-t0)
     return specXR
+def singleParticleScat(dicSettings, mcTable):
+	"""
+	Calculates the radar variables over the entire range
+
+	Parameters
+	----------
+	dicSettings: a dictionary with all settings output from loadSettings()
+	mcTable: McSnow data output from getMcSnowTable()
+
+	Returns
+	-------
+	specXR: xarray dataset with the spectra(range, vel) and KDP(range)
+	"""
+
+	t0 = time.time()
+	singlePart = xr.Dataset()
+	#specXR_turb = xr.Dataset()
+	vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
+	mcTable = creatRadarCols(mcTable, dicSettings)
+	t0 = time.time()
+	att_atm0 = 0.; att_ice_HH0=0.; att_ice_VV0=0.
+	for i, heightEdge0 in enumerate(dicSettings['heightRange']):
+
+		heightEdge1 = heightEdge0 + dicSettings['heightRes']
+
+		print('Range: from {0} to {1}'.format(heightEdge0, heightEdge1))
+		mcTableTmp = mcTable.where((mcTable['sHeight']>heightEdge0) &
+				 					(mcTable['sHeight']<=heightEdge1),drop=True)
+		
+		if mcTableTmp.vel.any():
+			mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
+						       			mcTableTmp, ndgs=dicSettings['ndgsVal'],
+						        		scatSet=dicSettings['scatSet'])#,height=(heightEdge1+heightEdge0)/2)
+			#print(mcTableTmp.sZeH)
+			singlePart = xr.merge([mcTableTmp,singlePart]) # TODO: do I need to normalize with Volume? I think so!!
+			#print(singlePart.sZeH)
+	print('total time with old method', time.time()-t0)
+	return singlePart
+
+
 '''
 def singleParticleTrajectories(dicSettings, mcTable):
 	"""
