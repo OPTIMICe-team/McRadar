@@ -88,7 +88,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         #print(len(eps_diss))
         #quit()
         del_v = (maxVel-minVel) / nfft
-		dicSettings = {'dataPath':dataPath,
+        dicSettings = {'dataPath':dataPath,
                        'elv':elv,
                        'nfft':nfft,
                        'maxVel':maxVel,
@@ -259,9 +259,9 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                 dicSettings['scatSet']['lutElevMono'] = [int(e) for e in listElev]
                 dicSettings['scatSet']['LUTFilesMono'] = lutFiles
                 #- now same for aggregates
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_dendrite_aggregates_freq*.nc') 
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_rimedagg_freq*.nc') 
                 #listFreq = [l.split('LUT_dendrite_aggregates')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
-                listFreq = [l.split('DDA_LUT_dendrite_aggregates_freq')[1].split('_elv')[0] for l in lutFiles] 
+                listFreq = [l.split('DDA_LUT_rimedagg_freq')[1].split('_elv')[0] for l in lutFiles] 
                 listFreq = list(dict.fromkeys(listFreq))
                 listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles] #TODO after testing remove _log
                 listElev = list(dict.fromkeys(listElev))
