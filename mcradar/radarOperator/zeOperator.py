@@ -566,6 +566,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     t0 = time.time()
                     lut = xr.open_dataset(dataset_filename,chunks={'Dmax':20,'aspect':20,'mass':20})#.load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
+                    #print(lut)
                     points = lut.sel(Dmax=xr.DataArray(mcTableColumn['dia'].values, dims='points'), # select nearest neighbour
 					                   aspect=xr.DataArray(mcTableColumn['sPhi'].values, dims='points'),
 					                    mass=xr.DataArray(mcTableColumn['mTot'].values, dims='points'),method='nearest')
@@ -592,11 +593,13 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
                     freSel = str(freSel).ljust(6,'0')#
                     #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
-                    lut = xr.open_dataset(dataset_filename).load()#,chunks={'mass':20})#.load()
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_rimedaggs_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                    lut = xr.open_dataset(dataset_filename)#,chunks={'Dmax':20,'mass':20})#.load()#,chunks={'mass':20})#.load()
                     lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
-                    points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),method='nearest')
-                    lut.close()
+                    points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),
+                    				Dmax=xr.DataArray(mcTableAgg['dia'].values, dims='points'),
+                    				method='nearest')
+                    #lut.close()
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # get scattering properties from Matrix entries
                     
