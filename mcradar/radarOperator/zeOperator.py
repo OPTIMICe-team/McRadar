@@ -593,7 +593,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
                     freSel = str(freSel).ljust(6,'0')#
                     #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_rimedaggs_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_rimedagg_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
                     lut = xr.open_dataset(dataset_filename)#,chunks={'Dmax':20,'mass':20})#.load()#,chunks={'mass':20})#.load()
                     lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
                     points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),
