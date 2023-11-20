@@ -10,14 +10,14 @@ import pandas as pd
 import xarray as xr
 
 def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
-                 convolute=True,nave=19,noise_pow=10**(-40/10),
+                 convolute=True,nave=np.array([10,20,28]),noise_pow=np.array([-50,-63,-58]),
                  theta=np.array([1.0,0.6,0.6]) , time_int=2.0 , tau=143*1e-9 ,
                  uwind=10.0, eps_diss=np.array([1e-6]), k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
                  maxVel=3, minVel=-3,  
                  freq=np.array([9.5e9, 35e9, 95e9]),
                  maxHeight=5500, minHeight=0,
                  heightRes=50, gridBaseArea=1,
-                 ndgsVal=30,attenuation=False,
+                 ndgsVal=30,attenuation=False,onlyIce=True,
                  scatSet={'mode':'full',
                           'safeTmatrix':False}):
     
@@ -53,6 +53,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
     heightRes: resolution of the height bins (default = 50) [m]
     gridBaseArea: area of the grid base (default = 1) [m^2]
     attenuation: get path integrated attenuation based on water vapour, O2 and H2O. This uses PAMTRA
+    onlyIce: if the atmo file goes to warmer temperatures, only go until 0°C and remove everything that is warmer!
     scatSet: dictionary that defines the settings for the scattering calculations
     scatSet['mode']: string that defines the scattering mode. Valid values are
                         - full -> pytmatrix calculations for each superparticle
@@ -87,6 +88,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         #if len(eps_diss)>1:
         #print(len(eps_diss))
         #quit()
+        
         del_v = (maxVel-minVel) / nfft
         dicSettings = {'dataPath':dataPath,
                        'elv':elv,
@@ -104,8 +106,9 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'gridBaseArea':gridBaseArea,
                        'scatSet':scatSet,
                        'convolute':convolute,
+                       'attenuation':attenuation,
                        'nave':nave,
-                       'noise_pow':noise_pow*(nfft*del_v),
+                       'noise_pow':(10**(noise_pow/10))*(nfft*del_v),
                        'eps_diss':eps_diss,
                        'theta':theta, 
                        'time_int':time_int,
@@ -116,7 +119,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'k_r':k_r,
                        'shear_height0':shear_height0,
                        'shear_height1':shear_height1,
-                       'attenuation':attenuation,
+                       'onlyIce':onlyIce,
                        }
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
@@ -124,6 +127,23 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
 
         dicSettings['velBins']=velBins
         dicSettings['velCenterBin']=velCenterBin
+        if onlyIce == True:
+            print(atmoFile)
+            if atmoFile != None: 
+                atmo = np.loadtxt(atmoFile)
+                height = atmo[:,0]
+                temp = atmo[:,2]# -273.15
+                atmoPD = pd.DataFrame(data=temp,index=height,columns=['temp'])
+                atmoPD.index.name='range'
+                atmoPD['press'] = atmo[:,3]
+                atmoPD['relHum'] = atmo[:,6]
+                atmoXR = atmoPD.to_xarray()
+                atmoReindex = atmoXR.reindex({'range':dicSettings['heightRange']+dicSettings['heightRes']/2},method='nearest')
+                dicSettings['temp']=atmoReindex.temp
+                dicSettings['relHum']=atmoReindex.relHum
+                dicSettings['press']=atmoReindex.press
+            else:
+                msg = ('\n').join(['since you want to check for melted particles (onlyIce==True) you need to give an atmoFile as input.'])
     elif PSD == True:
         del_v = (maxVel-minVel) / nfft
 		
@@ -143,7 +163,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'scatSet':scatSet,
                        'convolute':convolute,
                        'nave':nave,
-                       'noise_pow':noise_pow*(nfft*del_v),#noise_pow,
+                       'noise_pow':(10**(noise_pow/10))*(nfft*del_v),#noise_pow,
                        'eps_diss':eps_diss,
                        'theta':theta, 
                        'time_int':time_int,
@@ -155,6 +175,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                        'shear_height0':shear_height0,
                        'shear_height1':shear_height1,
                        'attenuation':attenuation,
+                       'onlyIce':onlyIce,
                        }
 
         velBins = np.arange(minVel, maxVel, dicSettings['velRes'])
@@ -170,22 +191,25 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         dicSettings = None
     #print(attenuation)
     if attenuation == True:
-        if atmoFile != None: 
-            atmoFile = np.loadtxt(atmoFile)
-            height = atmoFile[:,0]
-            temp = atmoFile[:,2]# -273.15
-            atmoPD = pd.DataFrame(data=temp,index=height,columns=['temp'])
-            atmoPD.index.name='range'
-            atmoPD['press'] = atmoFile[:,3]
-            atmoPD['relHum'] = atmoFile[:,6]
-            atmoXR = atmoPD.to_xarray()
-            atmoReindex = atmoXR.reindex({'range':dicSettings['heightRange']+dicSettings['heightRes']/2},method='nearest')
-            dicSettings['temp']=atmoReindex.temp
-            dicSettings['relHum']=atmoReindex.relHum
-            dicSettings['press']=atmoReindex.press
-            
+        if ('temp' in dicSettings) and ('relHum' in dicSettings) and ('press' in dicSettings):
+            msg = ('\n').join(['already loaded atmosphere into dicSettings'])
         else:
-            msg = ('\n').join(['since you want to do the attenuation correction you need to give an atmoFile as input.'])
+            if atmoFile != None: 
+                atmo = np.loadtxt(atmoFile)
+                height = atmo[:,0]
+                temp = atmo[:,2]# -273.15
+                atmoPD = pd.DataFrame(data=temp,index=height,columns=['temp'])
+                atmoPD.index.name='range'
+                atmoPD['press'] = atmo[:,3]
+                atmoPD['relHum'] = atmo[:,6]
+                atmoXR = atmoPD.to_xarray()
+                atmoReindex = atmoXR.reindex({'range':dicSettings['heightRange']+dicSettings['heightRes']/2},method='nearest')
+                dicSettings['temp']=atmoReindex.temp
+                dicSettings['relHum']=atmoReindex.relHum
+                dicSettings['press']=atmoReindex.press
+                
+            else:
+                msg = ('\n').join(['since you want to do the attenuation correction you need to give an atmoFile as input.'])
     if (scatSet['mode'] == 'table') or (scatSet['mode']=='wisdom'):
         print(scatSet)
         if 'lutPath' in scatSet.keys():
@@ -240,6 +264,12 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                                'check your settings'])
             dicSettings = None
         print(msg)
+    elif scatSet['mode'] == 'snowScatt':
+        if 'particle_name' in scatSet.keys():
+        	print('you selected snowScatt as scattering mode, the scattering will be calculated by snowScatt using particle ' + scatSet['particle_name'])
+        else:
+        	raise ValueError(f"you need to contribute a particle_name with scatMode snowScatt")
+        	
     elif scatSet['mode'] == 'Rayleigh':
         #dicSettings['elv'] = 90 # TODO: once elevation gets flexible, need to change that back
         print('scattering mode Rayleigh for all particles, only advisable for low frequency radars. No polarimetric output is generated')
