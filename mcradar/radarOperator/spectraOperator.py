@@ -65,7 +65,7 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
     xarray dims = (range, vel) 
     """
     
-
+    divAggMono = True # TODO make that a keyword!
     specTable = xr.Dataset()
     if (scatSet['mode'] == 'SSRGA') or (scatSet['mode'] == 'Rayleigh') or (scatSet['mode'] == 'SSRGA-Rayleigh'):
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
@@ -75,10 +75,10 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
         #specTable['specBroad_H'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
         
         if convolute == True:
-            for wl,th in zip(wls,theta):
+            for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
                 for elv in elvs:
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
-                                                                       noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                                                                       noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
     	
     else:
         mcTable['sZeMultH'] = mcTable['sZeH'] * mcTable['sMult']
@@ -92,20 +92,69 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
         #specTable['specBroad_H'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
         #specTable['specBroad_V'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
         #specTable['specBroad_HV'] = xr.Dataarray(dims=['elevation','wavelength'],coords={'elevation':specTable.elevation,'wavelength':specTable.wavelength})
-        
+
+		
         if convolute == True:
-            for wl,th in zip(wls,theta):
+            for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
             	
                 for elv in elvs:
-                    mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
+                    if elv == 30:
+                        nv = 90
+                    #mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
                     #specTable['spec_H'].loc[:,elv,wl],specTable['specBroad_H'].loc[elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                     #                                                  noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                     specTable['spec_H'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
-                                                                      noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                                                                      noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                     specTable['spec_V'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
-                                                                      noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                                                                      noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                     specTable['spec_HV'].loc[:,elv,wl] = convoluteSpec(specTable['spec_HV'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
-                                                                       noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                                                                       noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+
+        if divAggMono:
+            mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True) # select only plates
+            mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
+            if len(mcTableMono.sPhi)>0:
+                mcTableMono['sZeMultH'] = mcTableMono['sZeH'] * mcTableMono['sMult']
+                mcTableMono['sZeMultV'] = mcTableMono['sZeV'] * mcTableMono['sMult']
+                mcTableMono['sZeMultHV'] = mcTableMono['sZeHV'] * mcTableMono['sMult']
+                groupMono = mcTableMono.groupby_bins('vel', velBins,labels=velCenterBins).sum()
+                specTable['spec_H_Mono'] = groupMono['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
+                specTable['spec_V_Mono'] = groupMono['sZeMultV'].rename({'vel_bins':'vel'})
+                specTable['spec_HV_Mono'] = groupMono['sZeMultHV'].rename({'vel_bins':'vel'})
+                if convolute == True:
+                    for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
+                        for elv in elvs:
+                            if elv == 30:
+                                nv = 90
+                            #specTable['spec_H'].loc[:,elv,wl],specTable['specBroad_H'].loc[elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                            #                                                  noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                            specTable['spec_H_Mono'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H_Mono'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                          noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                            specTable['spec_V_Mono'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V_Mono'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                          noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                            specTable['spec_HV_Mono'].loc[:,elv,wl] = convoluteSpec(specTable['spec_HV_Mono'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                           noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+
+            if len(mcTableAgg.sPhi)>0:
+                mcTableAgg['sZeMultH'] = mcTableAgg['sZeH'] * mcTableAgg['sMult']
+                mcTableAgg['sZeMultV'] = mcTableAgg['sZeV'] * mcTableAgg['sMult']
+                mcTableAgg['sZeMultHV'] = mcTableAgg['sZeHV'] * mcTableAgg['sMult']
+                groupAgg = mcTableAgg.groupby_bins('vel', velBins,labels=velCenterBins).sum()
+                specTable['spec_H_Agg'] = groupAgg['sZeMultH'].rename({'vel_bins':'vel'})#.assign_coords({'vel':velCenterBins})
+                specTable['spec_V_Agg'] = groupAgg['sZeMultV'].rename({'vel_bins':'vel'})
+                specTable['spec_HV_Agg'] = groupAgg['sZeMultHV'].rename({'vel_bins':'vel'})
+
+                if convolute == True:
+                    for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
+                        for elv in elvs:
+                            if elv == 30:
+                                nv = 90
+                            specTable['spec_H_Agg'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H_Agg'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                          noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                            specTable['spec_V_Agg'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V_Agg'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                          noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
+                            specTable['spec_HV_Agg'].loc[:,elv,wl] = convoluteSpec(specTable['spec_HV_Agg'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
+                                                                           noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
 
     specTable = specTable.expand_dims(dim='range').assign_coords(range=[centerHeight])
     return specTable
