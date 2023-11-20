@@ -8,6 +8,7 @@ from glob import glob
 from pytmatrix.tmatrix import Scatterer
 from pytmatrix import psd, orientation, radar
 from pytmatrix import refractive, tmatrix_aux
+import snowScatt
 from scipy import constants
 from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
@@ -18,7 +19,7 @@ import time
 import matplotlib.colors as colors
 import matplotlib as mpl
 debugging = False
-
+onlyInterp = False
 
 # TODO: this function should deal with the LUTs
 def calcScatPropOneFreq(wl, radii, as_ratio, 
@@ -469,6 +470,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True)
         mcTableMono = mcTable.where(mcTable['sNmono']==1,drop=True)
         lut = xr.open_dataset(scatSet['lutFile']) # SSRGA LUT
+        
         for wl in wls:
             for elv in elvs:
                 wlStr = '{:.2e}'.format(wl) # wl here is in mm!!
@@ -487,12 +489,28 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                 points = lut.sel(frequency=freq, temperature=270.0, elevation=elv, 
                                  size = xr.DataArray(mcTableAgg['dia'].values, dims='points'),
                                  method='nearest') # select nearest particle properties.
+                #plt.semilogx(points.size,10*np.log10(prefactor*points.Cbck*1e6),ls='None',marker='.',label=freq*1e-9)
+                #quit()
                 if len(points.Cbck)>0: # only if we have aggregates this works. Otherwise we need to write nan here
                   ssCbck = points.Cbck*1e6 # in mm^3 
                   #mcTable['sZeH_{0}_elv{1}'.format(wlStr,elv)].values[mcTable['sNmono']>1] = prefactor*ssCbck * 1e18 # 1e18 to convert to mm6/m3
                   mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck 
-    
-        
+        #plt.legend()
+        #plt.show()
+    elif scatSet['mode'] == 'snowScatt':
+        for wl in wls:
+            for elv in elvs:
+                wl_m = wl*1e-3
+                prefactor = 2*wl_m**4/(np.pi**4*K2)
+                SS_RGA = snowScatt.calcProperties(diameters=mcTable['dia'].values, 
+                                                  massScattering=mcTable['mTot'].values,
+			                                      wavelength=wl_m,
+			                                      properties=scatSet['particle_name'],
+			                                      temperature=270,#temperature.values,
+			                                      theta = np.deg2rad(90-elv),
+			                                      Nangles=721)
+                ssCext, ssCabs, ssCsca, ssCbck, ssasym, ssphase, mass_p, ssvel, ssarea = SS_RGA    
+                mcTable['sZeH'].loc[elv,wl,mcTable.index] = prefactor*ssCbck*1e18 
     elif scatSet['mode'] == 'DDA':
         #-- this option uses the DDA scattering tables.
         
@@ -501,7 +519,7 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
         mcTablePlate = mcTableCry.where(mcTableCry['sPhi']<=1,drop=True) # select only plates
         mcTableColumn = mcTableCry.where(mcTableCry['sPhi']>1,drop=True) # select only needle 
         mcTableAgg = mcTable.where(mcTable['sNmono']>1,drop=True) # select only aggregates
-        
+        rimed = False # TODO: make that dependent on rime mass fraction!
         for wl in wls:
             wlStr = '{:.2e}'.format(wl)
             f = 299792458e3/wl
@@ -513,17 +531,19 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = scatSet['lutFreqMono'][np.argmin(np.abs(np.array(scatSet['lutFreqMono'])-f/1e9))] # get correct frequency of LUT
                     freSel = str(freSel).ljust(6,'0')#
                     dataset_filename = scatSet['lutPath'] + 'DDA_LUT_plate_freq{}_elv{:d}.nc'.format(freSel, int(elvSelMono)) # get filename of LUT
-                    print(dataset_filename)
+                    #print(dataset_filename)
                     # open LUT
                     t0 = time.time()
                     lut = xr.open_dataset(dataset_filename,chunks={'Dmax':20,'aspect':20,'mass':20})#.load()
                     lut = lut.sel(wavelength=wl,elevation=elv,method='nearest')
                     #t0 = time.time()
                     #t0tot = time.time()
+                    #lut = lut.where(lut.Z11flag==0)
                     points = lut.sel(Dmax=xr.DataArray(mcTablePlate['dia'].values, dims='points'), # select nearest value
-					                   aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
-					                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
-                    
+					                aspect=xr.DataArray(mcTablePlate['sPhi'].values, dims='points'),
+                                    #density=xr.DataArray(mcTablePlate['sRho_tot'].values, dims='points'),method='nearest')
+                                    mass=xr.DataArray(mcTablePlate['mTot'].values, dims='points'),method='nearest')
+
                     #fig,ax = plt.subplots()
                     #p=ax.scatter(mcTablePlate.dia,mcTablePlate.sPhi,c=mcTablePlate.sMult,norm=colors.LogNorm(),cmap='gnuplot')
                     #cbar=plt.colorbar(p,ax=ax,label='sMult')
@@ -538,11 +558,18 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                         if points.Z11flag.sum()>0:
                        	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these plates are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
-                        print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates')
-                        print('mcTable sPhi',min(mcTablePlate.sPhi.values))
-                        print('LUT sPhi',min(lut.aspect.values))
+                        #print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' plates')
+                        #print('mcTable sPhi',min(mcTablePlate.sPhi.values))
+                        #print('LUT sPhi',min(lut.aspect.values))
+                    #print(points.Z11flag)
+                    if onlyInterp:
+                        points = points.where(points.Z11flag==0)
+                    #print(points)
+                    #quit()
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
-                    
+                    #plt.semilogx(points.Dmax,10*np.log10(reflect_h/reflect_v),marker='.',ls='None')
+                    #plt.savefig('same_IGF1.png')
+                    #plt.show()
                     mcTable['sZeH'].loc[elv,wl,mcTablePlate.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTablePlate.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTablePlate.index] = reflect_hv
@@ -570,11 +597,19 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                         if points.Z11flag.sum()>0:
                         	#warnings.warn('Careful, {0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these particles are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
                             print('{0} Z11 of total {1} were in the nearest neighbour look up regime. So scattering properties of these columns are uncertain!'.format(int(points.Z11flag.sum().values),len(points.Z11flag)))
-                        print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns')
-                        print('mcTable sPhi',max(mcTableColumn.sPhi.values))
-                        print('LUT sPhi',max(lut.aspect.values))
-                   
+                        #print('sel and calculate took ',time.time()-t0,' seconds for ',len(points.Z11),' columns')
+                        #print('mcTable sPhi',max(mcTableColumn.sPhi.values))
+                        #print('LUT sPhi',max(lut.aspect.values))
+                    #print(points.Z11flag.values)
+                    if onlyInterp:
+                        points = points.where(points.Z11flag==0)
+                    #print(points.Z11.values)
+                    
+                    #quit()
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # calculate scattering properties from Matrix entries
+                    #plt.plot(points.Dmax,10*np.log10(reflect_h),marker='.',ls='None')
+                    #plt.savefig('same_IGF1.png')
+                    #plt.show()
                     mcTable['sZeH'].loc[elv,wl,mcTableColumn.index] = reflect_h
                     mcTable['sZeV'].loc[elv,wl,mcTableColumn.index] = reflect_v
                     mcTable['sZeHV'].loc[elv,wl,mcTableColumn.index] = reflect_hv
@@ -589,12 +624,20 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                     freSel = scatSet['lutFreqAgg'][np.argmin(np.abs(np.array(scatSet['lutFreqAgg'])-f/1e9))]# select correct frequency
                     freSel = str(freSel).ljust(6,'0')#
                     #print('frequency ', f/1.e9, 'lut frequency ', freSel)
-                    dataset_filename = scatSet['lutPath'] + 'DDA_LUT_rimedagg_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
-                    lut = xr.open_dataset(dataset_filename)#,chunks={'Dmax':20,'mass':20})#.load()#,chunks={'mass':20})#.load()
-                    lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
-                    points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),
-                    				Dmax=xr.DataArray(mcTableAgg['dia'].values, dims='points'),
-                    				method='nearest')
+                    if rimed == True:
+                        dataset_filename = scatSet['lutPath'] + 'DDA_LUT_rimedagg_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                        lut = xr.open_dataset(dataset_filename)#,chunks={'Dmax':20,'mass':20})#.load()#,chunks={'mass':20})#.load()
+                        lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
+                        points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),
+				                        Dmax=xr.DataArray(mcTableAgg['dia'].values, dims='points'),
+				                        method='nearest')
+                    else:
+                        dataset_filename = scatSet['lutPath'] + 'DDA_LUT_dendrite_aggregates_freq{}_elv{}.nc'.format(freSel,int(elvSelAgg))#, int(elvSelAgg)) 
+                        lut = xr.open_dataset(dataset_filename)#,chunks={'Dmax':20,'mass':20})#.load()#,chunks={'mass':20})#.load()
+                        lut = lut.sel(elevation = elv, wavelength=wl,method='nearest') # select closest elevation and wavelength
+                        points = lut.sel(mass = xr.DataArray(mcTableAgg['mTot'].values, dims='points'),
+				                        #Dmax=xr.DataArray(mcTableAgg['dia'].values, dims='points'),
+				                        method='nearest')
                     #lut.close()
                     
                     reflect_h,  reflect_v, reflect_hv, kdp_M1, rho_hv, cext_hh, cext_vv = radarScat(points, wl) # get scattering properties from Matrix entries
