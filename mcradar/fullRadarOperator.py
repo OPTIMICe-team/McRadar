@@ -92,8 +92,9 @@ def fullRadarParallel(dicSettings, mcTable):
 #	quit()
 	t0 = time.time()
 	n_cores = multiprocessing.cpu_count()
-	if n_cores > 1:
-		n_cores = n_cores - 1 # we have the main function running on one core and our institute does not allow to use all cores
+	if reduce_ncores:
+		if n_cores > 1:
+			n_cores = n_cores - 1 # we have the main function running on one core and our institute does not allow to use all cores
 	print(n_cores)
 	pool = multiprocessing.Pool(n_cores)
 	
