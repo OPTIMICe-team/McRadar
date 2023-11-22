@@ -87,7 +87,7 @@ def fullRadarParallel(dicSettings, mcTable):
 	#print(mcTable.sHeight.min())
 	#print(dicSettings['heightRange'])
 	#print(np.where(dicSettings['heightRange'] > mcTable.sHeight.min().values))
-	dicSettings['heightRange'] = dicSettings['heightRange'][np.where(dicSettings['heightRange'] > mcTable.sHeight.min().values)]
+	#dicSettings['heightRange'] = dicSettings['heightRange'][np.where(dicSettings['heightRange'] > mcTable.sHeight.min().values)]
 #	print(dicSettings['heightRange'])
 #	quit()
 	t0 = time.time()
@@ -102,7 +102,8 @@ def fullRadarParallel(dicSettings, mcTable):
 	
 	for result in pool.starmap(getRadarParParallel,args):
 		#print(result)
-		specXR = xr.merge([specXR,result])
+		if result:
+			specXR = xr.merge([specXR,result])
 	
 	#processes = [Process(target=getRadarParParallel,args=(dicSettings)) for heightEdge0 in dicSettings['heightRange']]
 	#print(specXR)
