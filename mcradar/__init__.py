@@ -16,9 +16,12 @@ from .radarOperator.spectraOperator import getMultFrecSpec
 from .radarOperator.spectraOperator import convoluteSpec
 from .radarOperator.zeOperator import calcParticleZe
 from .radarOperator.kdpOperator import getIntKdp
+from .radarOperator.attenuationOperator import getHydroAtmAtt
 
 from .fullRadarOperator import fullRadar
 from .fullRadarOperator import fullRadarParallel
 
 from .fullRadarOperator import singleParticleTrajectories
 from .fullRadarOperator import singleParticleScat
+
+
