@@ -10,7 +10,7 @@ import pandas as pd
 import xarray as xr
 
 def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
-                 convolute=True,nave=np.array([10,20,28]),noise_pow=np.array([-50,-63,-58]),
+                 convolute=True,nave=np.array([10,20,28,90]),noise_pow=np.array([-50,-63,-58]),
                  theta=np.array([1.0,0.6,0.6]) , time_int=2.0 , tau=143*1e-9 ,
                  uwind=10.0, eps_diss=np.array([1e-6]), k_theta=np.array([0]),k_phi=np.array([0]),k_r=np.array([0]),shear_height0=0,shear_height1=0,
                  maxVel=3, minVel=-3,  
@@ -34,7 +34,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
     maxVel: maximum fall velocity (default = 3) [m/s]
     minVel: minimum fall velocity (default = -3) [m/s]
     convolute: if True, the spectrum will be convoluted with turbulence and random noise (default = True)
-    nave: number of spectral averages (default = 19), needed only if convolute == True
+    nave: number of spectral averages (default = 10, 20, 28, 90 for X-Band, Ka-Band, W-Band and pol. W-Band), needed only if convolute == True
     noise_pow: radar noise power [mm^6/m^3] (default = -40 dB), needed only if convolute == True
     theta: beamwidth of radar, in degree (will later be transformed into rad)
     time_int: integration time of radar in sec, needed only if convolute == True
