@@ -5,10 +5,6 @@ import subprocess
 import numpy as np
 import xarray as xr
 from glob import glob
-from pytmatrix.tmatrix import Scatterer
-from pytmatrix import psd, orientation, radar
-from pytmatrix import refractive, tmatrix_aux
-import snowScatt
 from scipy import constants
 from scipy.optimize import curve_fit
 from mcradar.tableOperator import creatRadarCols
@@ -26,6 +22,10 @@ def calcScatPropOneFreq(wl, radii, as_ratio,
                         rho, elv, ndgs=30,
                         canting=False, cantingStd=1, 
                         meanAngle=0, safeTmatrix=False):
+    from pytmatrix.tmatrix import Scatterer
+    from pytmatrix import psd, orientation, radar
+    from pytmatrix import refractive, tmatrix_aux
+
     """
     Calculates the Ze at H and V polarization, Kdp for one wavelength
     TODO: LDR???
@@ -497,7 +497,8 @@ def calcParticleZe(wls, elvs, mcTable, ndgs=30,
                   mcTable['sZeH'].loc[elv,wl,mcTableAgg.index] = prefactor*ssCbck 
         #plt.legend()
         #plt.show()
-    elif scatSet['mode'] == 'snowScatt':
+    elif scatSet['mode'] == 'snowScatt':    
+        import snowScatt
         for wl in wls:
             for elv in elvs:
                 wl_m = wl*1e-3
