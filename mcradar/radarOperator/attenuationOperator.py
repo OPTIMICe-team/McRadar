@@ -7,6 +7,8 @@ from scipy import constants
 import warnings
 import matplotlib.pyplot as plt
 import time
+import multiprocessing
+from multiprocessing import Process, Queue
 #import pyPamtra
 
 def get_attenuation(mcTable,wls,elvs,temp,relHum,press,mode,vol,centerHeight,heightRes):#,att_atm0,att_ice_HH0,atm_att_ice_VV0):
@@ -266,8 +268,31 @@ def abso2(tempK,pres,vapden,freq):
 		sf2 = (df - (freq+f[k])*y)/((freq+f[k])**2 + df**2)
 		loc_sum = loc_sum + strk*(sf1+sf2)*(freq/f[k])**2
 	#end do
+	#print(loc_sum)
+	loc_sum = 1.6e-17*freq**2*dfnr/(th*(freq**2 + dfnr**2))
+	'''
+	n_cores = multiprocessing.cpu_count()
+	if n_cores > 1:
+		n_cores = n_cores - 1
+	pool = multiprocessing.Pool(n_cores)
+	args = [(w300s,den,pres,b,y300s,vs,th1,s300s,bes,freq,fs) for w300s,y300s,vs,s300s,bes,fs in zip(w300,y300,v,s300,be,f)]
+	for result in pool.starmap(forLoopO2,args):
+		if result:
+			loc_sum = loc_sum + result
+	#print(loc_sum)
+	#quit()
+	'''
+	
 	o2abs = 0.5034e12*loc_sum*presda*th**3/np.pi
 	return o2abs
+
+def forLoopO2(w300,den,pres,b,y300,v,th1,s300,be,freq,f):
+	df = w300*den
+	y = 0.001*pres*b*(y300+v*th1)
+	strk = s300*np.exp(-be*th1)
+	sf1 = (df + (freq-f)*y)/((freq-f)**2 + df**2)
+	sf2 = (df - (freq+f)*y)/((freq+f)**2 + df**2)
+	return strk*(sf1+sf2)*(freq/f)**2
 	
 def absh2o(tempK,pres,rho,freq):
 	'''
@@ -323,20 +348,46 @@ def absh2o(tempK,pres,rho,freq):
 			s = s1[i]*ti2*np.exp(b2[i]*(1.-ti))
 			df[0] = freq - fl[i]
 			df[1] = freq + fl[i]
-			#  use clough's definition of local line contribution
+		#  use clough's definition of local line contribution
 			base = width/(562500. + wsq)
-			#  do for positive and negative resonances
+		#  do for positive and negative resonances
 			res = 0.
-			#do j=1,2
+		#do j=1,2
 			for j in range(2):
 				if(abs(df[j]) < 750.):
 					res = res + width/(df[j]**2+wsq) - base
 			
 			loc_sum = loc_sum + s*res*(freq/fl[i])**2
-		
+		'''
+		n_cores = multiprocessing.cpu_count()
+		if n_cores > 1:
+			n_cores = n_cores - 1
+		pool = multiprocessing.Pool(n_cores)
+		args = [(w3_s,pda,ti,x_s,ws_s,pvap,xs_s,s1_s,ti2,b2_s,freq,fl_s) for w3_s,x_s,ws_s,xs_s,s1_s,b2_s,fl_s in zip(w3,x,ws,xs,s1,b2,fl)]
+		for result in pool.starmap(forLoopH2o,args):
+			if result:
+				loc_sum = loc_sum + result
+		'''
 		absh2o = 0.3183e-4*den*loc_sum + con
 
 		return absh2o
+
+def forLoopH2o(w3,pda,ti,x,ws,pvap,xs,s1,ti2,b2,freq,fl):
+	df = np.empty(2)
+	width = w3*pda*ti**x + ws*pvap*ti**xs
+	wsq = width**2
+	s = s1*ti2*np.exp(b2*(1.-ti))
+	df[0] = freq - fl
+	df[1] = freq + fl
+	#  use clough's definition of local line contribution
+	base = width/(562500. + wsq)
+	#  do for positive and negative resonances
+	res = 0.
+	#do j=1,2
+	for j in range(2):
+		if(abs(df[j]) < 750.):
+			res = res + width/(df[j]**2+wsq) - base
+	return s*res*(freq/fl)**2
 
 def getDescriptor():
     
