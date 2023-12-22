@@ -84,12 +84,6 @@ def fullRadarParallel(dicSettings, mcTable):
 	#specXR_turb = xr.Dataset()
 	
 	mcTable = creatRadarCols(mcTable, dicSettings)
-	#print(mcTable.sHeight.min())
-	#print(dicSettings['heightRange'])
-	#print(np.where(dicSettings['heightRange'] > mcTable.sHeight.min().values))
-	#dicSettings['heightRange'] = dicSettings['heightRange'][np.where(dicSettings['heightRange'] > mcTable.sHeight.min().values)]
-#	print(dicSettings['heightRange'])
-#	quit()
 	t0 = time.time()
 	n_cores = multiprocessing.cpu_count()
 	if reduce_ncores:
@@ -105,33 +99,7 @@ def fullRadarParallel(dicSettings, mcTable):
 		if result:
 			specXR = xr.merge([specXR,result])
 	
-	#processes = [Process(target=getRadarParParallel,args=(dicSettings)) for heightEdge0 in dicSettings['heightRange']]
-	#print(specXR)
-	#quit()
 	
-	#if dicSettings['attenuation'] == True:
-		#print(2*np.cumsum(specXR.att_atmo.cumsum(dim='range')))
-		#plt.plot(specXR.att_atmo.sel(wavelength=specXR.wavelength[0],elevation=90),specXR.range,label='atmo')
-		#plt.plot(specXR.att_ice_HH.sel(wavelength=specXR.wavelength[0],elevation=90),specXR.range,label='ice')
-		#plt.savefig('test_att_atmo_dh.png')
-		#plt.show()
-		#quit()
-	#	specXR['att_atm_ice_HH'] = 2*specXR.att_ice_HH.cumsum(dim='range') + 2*specXR.att_atmo.cumsum(dim='range')
-	#	specXR['att_atm_ice_VV'] = 2*specXR.att_ice_VV.cumsum(dim='range') + 2*specXR.att_atmo.cumsum(dim='range')
-	#	specXR.att_atm_ice_HH.attrs['long_name'] = '2 way attenuation at HH polarization'
-	#	specXR.att_atm_ice_HH.attrs['unit'] = 'dB'
-	#	specXR.att_atm_ice_HH.attrs['comment'] = '2 way attenuation for ice particles and atmospheric gases (N2,O2,H2O). The spectra are divided my this, so to get unattenuated spectra, multiply with this (in linear units)'
-		
-	#	specXR.att_atm_ice_HH.attrs['long_name'] = '2 way attenuation at VV polarization'
-	#	specXR.att_atm_ice_HH.attrs['unit'] = 'dB'
-	#	specXR.att_atm_ice_HH.attrs['comment'] = '2 way attenuation for ice particles and atmospheric gases (N2,O2,H2O). The spectra are divided my this, so to get unattenuated spectra, multiply with this (in linear units)'
-		
-	#	if (dicSettings['scatSet']['mode'] == 'SSRGA') or (dicSettings['scatSet']['mode'] == 'Rayleigh') or (dicSettings['scatSet']['mode'] == 'SSRGA-Rayleigh'):
-	#		specXR['spec_H'] = specXR.spec_H/(10**(specXR.att_atm_ice_HH/10))
-	#	else:		
-	#		specXR['spec_H_att'] = specXR.spec_H/(10**(specXR.att_atm_ice_HH/10))
-	#		specXR['spec_V'] = specXR.spec_V/(10**(specXR.att_atm_ice_VV/10))
-	#		specXR['spec_HV'] = specXR.spec_HV/(10**(specXR.att_atm_ice_HH/10))	
 	if debugging:
 		print('total time with parallelizing for all heights was', time.time()-t0)
 	
