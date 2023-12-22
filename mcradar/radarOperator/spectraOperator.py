@@ -99,7 +99,7 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
             	
                 for elv in elvs:
                     if elv == 30:
-                        nv = 90
+                        nv = 2*nv
                     #mcTablePD = mcTable.sel(wavelength=wl,elevation=elv)
                     #specTable['spec_H'].loc[:,elv,wl],specTable['specBroad_H'].loc[elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                     #                                                  noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
@@ -125,7 +125,7 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
                     for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
                         for elv in elvs:
                             if elv == 30:
-                                nv = 90
+                                nv = 2*nv
                             #specTable['spec_H'].loc[:,elv,wl],specTable['specBroad_H'].loc[elv,wl] = convoluteSpec(specTable['spec_H'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                             #                                                  noise_pow,nave,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                             specTable['spec_H_Mono'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H_Mono'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
@@ -148,7 +148,7 @@ def getMultFrecSpec(wls, elvs, mcTable, velBins, velCenterBins , centerHeight,
                     for wl,th,nv,noise in zip(wls,theta,nave,noise_pow):
                         for elv in elvs:
                             if elv == 30:
-                                nv = 90
+                                nv = 2*nv
                             specTable['spec_H_Agg'].loc[:,elv,wl] = convoluteSpec(specTable['spec_H_Agg'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
                                                                           noise,nv,th,uwind,time_int,centerHeight,k_theta,k_phi,k_r,tau)
                             specTable['spec_V_Agg'].loc[:,elv,wl] = convoluteSpec(specTable['spec_V_Agg'].sel(wavelength=wl,elevation=elv).fillna(0),wl,velCenterBins,eps_diss,
