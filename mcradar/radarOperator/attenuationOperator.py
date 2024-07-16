@@ -92,7 +92,7 @@ def get_attenuation(mcTable,wls,elvs,temp,relHum,press,mode,vol,centerHeight,hei
 
 def getHydroAtmAtt(temp,relHum,pres,freq):
 	'''
-	calculate attenuation how it is done in python. It needs to have getAtmAttenuation
+	calculate attenuation how it is done in PAMTRA. It needs to have getAtmAttenuation
 	Parameters
 	----------
 	temp: temperature in Kelvin
