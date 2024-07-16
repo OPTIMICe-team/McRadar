@@ -99,10 +99,8 @@ def getHydroAtmAtt(temp,relHum,pres,freq):
 	relHum: relative humidity with respect to liquid water %
 	freq: the frequency of the radar in GHz
 	pres: pressure in Pa
-	delta_h: height increment in m
 	Returns
-	att_hydro: attenuation due to hydrometeors in this height bin in dB 
-	att_atmo: attenuation due to atmosphere in dB
+	rt_kextatmo: extinction coeff. of atmosphere. To get attenuation in dB: 10*np.log10(np.exp(rt_kextatmo.values * dZ)) with dZ height increment
 	----------
 	'''
 	r_v = 461.5249933083879
