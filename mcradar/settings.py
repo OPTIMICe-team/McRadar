@@ -19,7 +19,7 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                  heightRes=50, gridBaseArea=1,
                  ndgsVal=30,attenuation=False,onlyIce=True,
                  scatSet={'mode':'full',
-                          'safeTmatrix':False}):
+                          'safeTmatrix':False,'beta':0}):
     
    # TODO make eps_diss, wind and shear dependent on height (so an array with length of height). One idea: read in a file with height and eps_diss and then it can select the according eps_diss in full_radar that corresponds to the height. Or: already have eps_diss specified for all heights and just loop through it in fullRadar
     """
@@ -68,7 +68,8 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                         - SSRGA-Rayleigh -> this mode uses Rayleigh for the single monomer particles and SSRGA for aggregates.
                         - DDA -> this mode uses DDA table. Possible frequencies: 9.6GHz, 35.5GHz, 94.0GHz. Selection is based on mass, ar and size. 
                         		 Columnar or plate-like scattering table will be chosen depending on the aspect ratio of the particles. You need to specify the path to the LUT.  
-                          
+    scatSed['beta']: wobbling angle of particles, default: 0°
+                      
       scatSet['lutPath']: in case scatSet['mode'] is either 'table' or 'wisdom' or 'SSRGA' or 'SSRGA-Rayleigh' or 'DDA' the path to the lut.nc files is required
       scatSet['particle_name']: in case scatSet['mode'] is either 'SSRGA' or 'SSRGA-Rayleigh' the name of the particle to use SSRGA parameters is required. For a list of names see snowScatt. 
                                 A few examples: 'vonTerzi_dendrite' 
@@ -279,7 +280,8 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
         if 'lutPath' in scatSet.keys():
             if os.path.exists(scatSet['lutPath']):
                 msg = 'Using LUTs in ' + scatSet['lutPath']
-                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_plate_freq*.nc') 
+                #lutFiles = glob(scatSet['lutPath']+'DDA_LUT_plate_beta{:.1f}*.nc'.format(scatSet['beta'])) 
+                lutFiles = glob(scatSet['lutPath']+'DDA_LUT_plate*.nc') 
                 
                 listFreq = [l.split('DDA_LUT_plate_')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
                 listFreq = list(dict.fromkeys(listFreq))
@@ -288,6 +290,15 @@ def loadSettings(PSD=False,dataPath=None,atmoFile=None, elv=90, nfft=512,
                 dicSettings['scatSet']['lutFreqMono'] = [float(f) for f in listFreq]
                 dicSettings['scatSet']['lutElevMono'] = [int(e) for e in listElev]
                 dicSettings['scatSet']['LUTFilesMono'] = lutFiles
+                
+                #listFreq = [l.split('freq')[1].split('_')[0] for l in lutFiles]
+                #listFreq = list(dict.fromkeys(listFreq))
+                #listElev = [l.split('elv')[1].split('.nc')[0] for l in lutFiles]
+                #listElev = list(dict.fromkeys(listElev))
+                #dicSettings['scatSet']['lutFreqMono'] = [float(f) for f in listFreq]
+                #dicSettings['scatSet']['lutElevMono'] = [int(e) for e in listElev]
+                #dicSettings['scatSet']['LUTFilesMono'] = lutFiles
+
                 #- now same for aggregates
                 lutFiles = glob(scatSet['lutPath']+'DDA_LUT_rimedagg_freq*.nc') 
                 #listFreq = [l.split('LUT_dendrite_aggregates')[1].split('_elv')[0].split('freq')[1] for l in lutFiles]
