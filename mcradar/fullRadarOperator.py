@@ -10,6 +10,10 @@ from mcradar.tableOperator import creatRadarCols
 import time
 import multiprocessing
 from multiprocessing import Process, Queue
+import sys
+if not sys.warnoptions: # bad form, would not recommend!
+    import warnings
+    warnings.simplefilter("ignore")
 debugging=True
 reduce_ncores = True
 def getRadarParParallel(heightEdge0,mcTable,dicSettings):#heightRes,wl,elv,ndgsVal,scatSet,velBins,velCenterBin,convolute,nave,noise_pow,eps_diss,uwind,time_int,theta,tau):
@@ -24,11 +28,6 @@ def getRadarParParallel(heightEdge0,mcTable,dicSettings):#heightRes,wl,elv,ndgsV
 		mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
 					       			mcTableTmp, ndgs=dicSettings['ndgsVal'],
 					        		scatSet=dicSettings['scatSet'])#,height=(heightEdge1+heightEdge0)/2)
-		#quit()
-		#if (heightEdge0 >= dicSettings['shear_height0']) and (heightEdge1 <= dicSettings['shear_height1']): # only if we are within the shear zone, have shear! TODO make it possible to have profile of wind shear read in!!
-		#	k_theta,k_phi,k_r = dicSettings['k_theta'], dicSettings['k_phi'], dicSettings['k_r']
-			
-		#else:
 		k_theta, k_phi, k_r = 0,0,0
 		tmpSpecXR = getMultFrecSpec(dicSettings['wl'], dicSettings['elv'],mcTableTmp, dicSettings['velBins'],
 					        		dicSettings['velCenterBin'], (heightEdge1+heightEdge0)/2,dicSettings['convolute'],dicSettings['nave'],dicSettings['noise_pow'],
@@ -39,25 +38,17 @@ def getRadarParParallel(heightEdge0,mcTable,dicSettings):#heightRes,wl,elv,ndgsV
 
 		
 		tmpSpecXR = tmpSpecXR/vol
-		
-		#specXR = xr.merge([specXR, tmpSpecXR])
-		
-		#if dicSettings['attenuation'] == True:
-		#	tmpAtt = get_attenuation(mcTableTmp, dicSettings['wl'], dicSettings['elv'],
-		#																dicSettings['temp'].sel(range=(heightEdge1+heightEdge0)/2), dicSettings['relHum'].sel(range=(heightEdge1+heightEdge0)/2), dicSettings['press'].sel(range=(heightEdge1+heightEdge0)/2),
-		#																dicSettings['scatSet']['mode'],	vol,(heightEdge1+heightEdge0)/2,dicSettings['heightRes'])#,att_atm0,att_ice_HH0,att_ice_VV0) 			
-			
-		#	tmpSpecXR = xr.merge([tmpSpecXR,tmpAtt])
-			#print(specXR)
-			#quit()
-			
 	
 		if (dicSettings['scatSet']['mode'] == 'full') or (dicSettings['scatSet']['mode'] == 'table') or (dicSettings['scatSet']['mode'] == 'wisdom') or (dicSettings['scatSet']['mode'] == 'DDA'):
 		#calculating the integrated kdp
 			tmpKdpXR =  getIntKdp(mcTableTmp,(heightEdge1+heightEdge0)/2)
 			tmpSpecXR = xr.merge([tmpSpecXR, tmpKdpXR/vol])
 			#print(specXR)
-				
+		#print(tmpSpecXR)
+		#plt.plot(tmpSpecXR.vel,tmpSpecXR.sel(elevation=90,wavelength=31.23,range=tmpSpecXR.range[0],method='nearest').spec_H)
+		#plt.savefig('/project/meteo/work/L.Terzi/McSnow_habit/test_McRadar_height{}.png'.format(tmpSpecXR.range.values))
+		#plt.close()
+		#quit()		
 		return tmpSpecXR
 	else:
 		print('empty dataset at this height range')
@@ -85,20 +76,27 @@ def fullRadarParallel(dicSettings, mcTable):
 	
 	mcTable = creatRadarCols(mcTable, dicSettings)
 	t0 = time.time()
-	n_cores = multiprocessing.cpu_count()
-	if reduce_ncores:
-		if n_cores > 1:
-			n_cores = n_cores - 1 # we have the main function running on one core and our institute does not allow to use all cores
+	n_cores = 4#multiprocessing.cpu_count()
+	#if reduce_ncores:
+	#	if n_cores > 1:
+	#		n_cores = n_cores - 1 # we have the main function running on one core and our institute does not allow to use all cores
 	print(n_cores)
 	pool = multiprocessing.Pool(n_cores)
 	
 	args = [(h, mcTable, dicSettings) for h in dicSettings['heightRange']]
 	
-	for result in pool.starmap(getRadarParParallel,args):
+	#for result in pool.starmap(getRadarParParallel,args):
+	#for h in dicSettings['heightRange']:
+	#	result = getRadarParParallel(h,mcTable,dicSettings)
 		#print(result)
-		if result:
-			specXR = xr.merge([specXR,result])
+		#quit()
+	#	if result:
+	#		specXR = xr.merge([specXR,result])
+	result =  pool.starmap(getRadarParParallel,args)
+	result = [x for x in result if x is not None]
 	
+	#print(result)
+	specXR = xr.merge(result)
 	
 	if debugging:
 		print('total time with parallelizing for all heights was', time.time()-t0)
@@ -159,7 +157,13 @@ def fullRadar(dicSettings, mcTable):
 		#		if 'Broad' not in var:
 		#			tmpSpecXR[var] = tmpSpecXR[var]/vol
 			tmpSpecXR = tmpSpecXR/vol
+			#plt.plot(tmpSpecXR.vel,10*np.log10(tmpSpecXR.spec_H.sel(elevation=90,wavelength=3.189,range=(heightEdge1+heightEdge0)/2,method='nearest')))
+			#print(10*np.log10(tmpSpecXR.spec_H.sum(dim='vel')/tmpSpecXR.spec_V.sum(dim='vel')))
+			#plt.show()
 			
+
+			#print(tmpSpecXR)
+			##quit()
 			specXR = xr.merge([specXR, tmpSpecXR])
 			
 			if dicSettings['attenuation'] == True:
@@ -211,42 +215,95 @@ def fullRadar(dicSettings, mcTable):
 	return specXR
 
 def singleParticleTrajectories(dicSettings, mcTable):
-    """
-    Calculates the radar variables over the entire range
+	"""
+	Calculates the radar variables over the entire range
 
-    Parameters
-    ----------
-    dicSettings: a dictionary with all settings output from loadSettings()
-    mcTable: McSnow data output from getMcSnowTable()
+	Parameters
+	----------
+	dicSettings: a dictionary with all settings output from loadSettings()
+	mcTable: McSnow data output from getMcSnowTable()
 
-    Returns
-    -------
-    specXR: xarray dataset with the single particle scattering properties
-    """
+	Returns
+	-------
+	specXR: xarray dataset with the single particle scattering properties
+	"""
 
-    t0 = time.time()
-    specXR = xr.Dataset()
-    #specXR_turb = xr.Dataset()
-    mcTable = creatRadarCols(mcTable, dicSettings)
-    counts = np.ones_like(dicSettings['heightRange'])*np.nan
-    vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
+	t0 = time.time()
+	specXR = xr.Dataset()
+	#specXR_turb = xr.Dataset()
+	mcTable = creatRadarCols(mcTable, dicSettings)
+	#counts = np.ones_like(dicSettings['heightRange'])*np.nan
+	#vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
+
+	for i, pID in enumerate(np.unique(mcTable['sMult'].values)):
+
+		mcTableTmp = mcTable.where(mcTable.sMult==pID,drop=True)
+		print(len(np.unique(mcTable['sMult'].values)),i)
+		mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
+									mcTableTmp, ndgs=dicSettings['ndgsVal'],
+									scatSet=dicSettings['scatSet'])
+		
+		mcTableTmp = mcTableTmp.assign_coords(index=mcTableTmp.sHeight).rename({'index':'range'})#.set_index('sHeight')
+		mcTableTmp = mcTableTmp.reindex(range=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
+		vars2drop = ['sMult','sZeMultH','sZeMultV','sZeMultHV','sCextHMult','sCextHMult','sKDPMult']
+		mcTableTmp = mcTableTmp.drop_vars(vars2drop)
+		mcTableTmp = mcTableTmp.expand_dims(dim='pID').assign_coords(pID=[pID])
+		#print(mcTableTmp)
+		#quit()
+		specXR = xr.merge([specXR, mcTableTmp])
+		
+	print('total time was ', time.time()-t0)
+	return specXR
+
+def calc_1_particle(mcTable,pID,dicSettings,i):
+	mcTableTmp = mcTable.where(mcTable.sMult==pID,drop=True)
+	print(len(np.unique(mcTable['sMult'].values)[::2]),i)
+	mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
+								mcTableTmp, ndgs=dicSettings['ndgsVal'],
+								scatSet=dicSettings['scatSet'])
+	mcTableTmp = mcTableTmp.assign_coords(index=mcTableTmp.sHeight).rename({'index':'range'})#.set_index('sHeight')
+	mcTableTmp = mcTableTmp.reindex(range=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
+	vars2drop = ['sMult','sZeMultH','sZeMultV','sZeMultHV','sCextHMult','sCextHMult','sKDPMult']
+	mcTableTmp = mcTableTmp.drop_vars(vars2drop)
 	
-    for i, pID in enumerate(np.unique(mcTable['sMult'].values)):
-    
-        mcTableTmp = mcTable.where(mcTable.sMult==pID,drop=True)
-        print(len(np.unique(mcTable['sMult'].values)),i)
-        mcTableTmp = calcParticleZe(dicSettings['wl'], dicSettings['elv'],
-                                    mcTableTmp, ndgs=dicSettings['ndgsVal'],
-                                    scatSet=dicSettings['scatSet'])
-        mcTableTmp = mcTableTmp.assign_coords(index=mcTableTmp.sHeight).rename({'index':'range'})#.set_index('sHeight')
-        mcTableTmp = mcTableTmp.reindex(range=dicSettings['heightRange'],method='nearest',tolerance=dicSettings['heightRes'])
-        mcTableTmp = mcTableTmp.drop_vars('sMult')
-        mcTableTmp = mcTableTmp.expand_dims(dim='sMult').assign_coords(sMult=[pID])
+	mcTableTmp = mcTableTmp.expand_dims(dim='pID').assign_coords(pID=[pID])
+	return mcTableTmp
 
-        specXR = xr.merge([specXR, mcTableTmp])
-        
-    print('total time was ', time.time()-t0)
-    return specXR
+def singleParticleTrajParallel(dicSettings, mcTable,MaxWorkers=10):
+	"""
+	Calculates the radar variables over the entire range
+
+	Parameters
+	----------
+	dicSettings: a dictionary with all settings output from loadSettings()
+	mcTable: McSnow data output from getMcSnowTable()
+
+	Returns
+	-------
+	specXR: xarray dataset with the single particle scattering properties
+	"""
+
+	t0 = time.time()
+	specXR = xr.Dataset()
+	#specXR_turb = xr.Dataset()
+	mcTable = creatRadarCols(mcTable, dicSettings)
+	#counts = np.ones_like(dicSettings['heightRange'])*np.nan
+	#vol = dicSettings['gridBaseArea'] * dicSettings['heightRes']
+
+	pool = multiprocessing.Pool(MaxWorkers)
+	
+	args = [(mcTable, pID, dicSettings,i) for i,pID in enumerate(np.unique(mcTable['sMult'].values)[::5])]
+	
+	result =  pool.starmap(calc_1_particle,args)
+	print('done with calcs, now need to merge')
+	result = [x for x in result if x is not None]
+	print(result)
+	specXR = xr.merge(result)
+		
+	print('total time was ', time.time()-t0)
+	return specXR
+
+
 def singleParticleScat(dicSettings, mcTable):
 	"""
 	Calculates the radar variables over the entire range
