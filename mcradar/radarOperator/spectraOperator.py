@@ -8,9 +8,9 @@ import xarray as xr
 import mcradar as mcr
 import scipy.signal as sig
 from scipy import constants
-from numba import jit
+#from numba import jit
 import timeit
-@jit(nopython=True)
+#@jit(nopython=True)
 def getVelIntSpec(mcTable, mcTable_binned, variable):
     """
     Calculates the integrated reflectivity for each velocity bin
